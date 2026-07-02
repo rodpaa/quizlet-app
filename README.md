@@ -1,16 +1,54 @@
-# React + Vite
+# Quizlet Study App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A browser-based study app with flashcards, written and multiple-choice tests,
+matching exercises, and PHI 2010 argument reconstruction drills.
 
-Currently, two official plugins are available:
+## Live Site
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+After GitHub Pages is enabled, the app is available at:
 
-## React Compiler
+https://rodpaa.github.io/quizlet-app/
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Requirements
 
-## Expanding the ESLint configuration
+- Node.js 22.12 or newer
+- npm (included with Node.js)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Run Locally
+
+```bash
+npm ci
+npm run dev
+```
+
+Open the local URL printed by Vite, normally `http://localhost:5173/`.
+
+## Commands
+
+```bash
+npm run dev      # Start the local development server
+npm run lint     # Check the source code
+npm run build    # Create the production build in dist/
+npm run preview  # Preview the production build locally
+npm run check    # Run lint and production build checks
+```
+
+## Study Content
+
+Flashcards and argument data are stored in `src/data/sets.js`. The interface is
+split into reusable components under `src/components/`.
+
+## Publish With GitHub Pages
+
+The workflow in `.github/workflows/deploy-pages.yml` checks and publishes the
+app whenever a commit is pushed to `main`.
+
+1. Push this repository to GitHub.
+2. Open the repository's **Settings > Pages**.
+3. Under **Build and deployment**, choose **GitHub Actions** as the source.
+4. Open the **Actions** tab and wait for `Deploy to GitHub Pages` to finish.
+5. Visit `https://rodpaa.github.io/quizlet-app/`.
+
+The Vite production base path is configured for the repository name
+`quizlet-app`. Update `base` in `vite.config.js` if the GitHub repository is
+renamed.
