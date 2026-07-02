@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: #f6f7fb;
+  color: #1a1d28;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 3D Card Flip */
+.card-scene {
+  perspective: 1000px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.card-face.back {
+  transform: rotateY(180deg);
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e5f0;
+  overflow: hidden;
+}
+.dark .progress-bar {
+  background: #374151;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4257b2, #7c5cbf);
+  transition: width 0.4s ease;
+}
+
+/* Match tile dragging */
+.match-tile {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.match-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.match-tile.selected {
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(66, 87, 178, 0.5);
+}
+
+.match-tile.matched {
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.35s ease;
+  pointer-events: none;
+}
+
+/* Confetti particles */
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-particle {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  animation: confettiFall 2s ease-in forwards;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f0f1f5; }
+::-webkit-scrollbar-thumb { background: #c5cae0; border-radius: 3px; }
+
+/* Input focus ring */
+input:focus, textarea:focus {
+  outline: 2px solid #4257b2;
+  outline-offset: 0;
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
