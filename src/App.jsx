@@ -7,6 +7,7 @@ import TestMCQ from './components/TestMCQ';
 import TestMatch from './components/TestMatch';
 import CombinedTest from './components/CombinedTest';
 import ArgumentBuilder from './components/ArgumentBuilder';
+import ComprehensionPractice from './components/ComprehensionPractice';
 import AuthModal from './components/AuthModal';
 import SetEditor from './components/SetEditor';
 import { useSets } from './context/SetsContext';
@@ -23,6 +24,7 @@ export default function App() {
   const goEdit = (id) => setPage({ type: 'editor', id });
   const goLearn = (id) => setPage({ type: 'learn', id });
   const goArgumentBuilder = (id) => setPage({ type: 'argument-builder', id });
+  const goComprehension = (id) => setPage({ type: 'comprehension', id });
   const goTest = (id, mode) => setPage({ type: 'test', id, mode });
 
   const hideNav = page.type === 'test' && page.mode === 'match';
@@ -61,6 +63,7 @@ export default function App() {
           setId={page.id}
           onLearn={goLearn}
           onArgumentBuilder={goArgumentBuilder}
+          onComprehension={goComprehension}
           onTest={goTest}
           onBack={goHome}
           onEdit={goEdit}
@@ -75,6 +78,15 @@ export default function App() {
         <ArgumentBuilder
           setId={page.id}
           onBack={() => goSet(page.id)}
+          onFlashcards={() => goLearn(page.id)}
+        />
+      )}
+
+      {page.type === 'comprehension' && (
+        <ComprehensionPractice
+          setId={page.id}
+          onBack={() => goSet(page.id)}
+          onArgumentBuilder={() => goArgumentBuilder(page.id)}
           onFlashcards={() => goLearn(page.id)}
         />
       )}

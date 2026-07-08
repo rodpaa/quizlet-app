@@ -1,13 +1,16 @@
-import { ArrowLeft, Edit3, Globe2, Lock, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, Brain, Edit3, Globe2, Lock, Network, Trash2, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSets } from '../context/SetsContext';
 
-export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onBack, onEdit }) {
+export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehension, onTest, onBack, onEdit }) {
   const { user } = useAuth();
   const { getSet, deleteSet } = useSets();
   const set = getSet(setId);
   if (!set) return null;
   const isOwner = set.ownerId === user?.id;
+  const argumentCount = set.arguments?.filter(argument => argument.builder !== false).length || 0;
+  const comprehensionCount = set.comprehensionQuestions?.length || 0;
+  const focusLabel = set.title.includes(':') ? set.title.split(':')[1].trim() : 'Focus';
 
   const remove = async () => {
     if (!window.confirm(`Delete "${set.title}"? This cannot be undone.`)) return;
@@ -42,13 +45,50 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onB
             <p className="text-gray-500 dark:text-gray-400 font-medium">{set.description}</p>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm font-bold">
               <span className="text-qblue">{set.cards.length} terms</span>
+              {argumentCount > 0 && <span className="text-qorange">{argumentCount} arguments</span>}
+              {comprehensionCount > 0 && <span className="text-qpurple">{comprehensionCount} comprehension questions</span>}
               <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400"><UserRound size={15} /> {isOwner ? 'Created by you' : set.authorName}</span>
               <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">{set.isPublic ? <Globe2 size={15} /> : <Lock size={15} />} {set.isPublic ? 'Public' : 'Private'}</span>
             </div>
           </div>
         </div>
 
-        {set.arguments && (
+        {(argumentCount > 0 || comprehensionCount > 0) && (
+          <div className="grid md:grid-cols-2 gap-3 mb-4">
+            {argumentCount > 0 && (
+              <button
+                onClick={() => onArgumentBuilder(setId)}
+                className="p-4 rounded-lg border-2 border-qorange bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors flex items-center gap-4 text-left"
+              >
+                <span className="w-11 h-11 rounded-lg bg-qorange text-white flex items-center justify-center shrink-0" aria-hidden="true">
+                  <Network size={24} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-black text-qorange">Argument Builder</div>
+                  <div className="text-sm text-orange-800 dark:text-orange-300 font-semibold">Reconstruct {argumentCount} arguments from shuffled dropdown choices</div>
+                </div>
+                <span className="text-qorange font-black" aria-hidden="true">&rarr;</span>
+              </button>
+            )}
+            {comprehensionCount > 0 && (
+              <button
+                onClick={() => onComprehension(setId)}
+                className="p-4 rounded-lg border-2 border-qpurple bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-4 text-left"
+              >
+                <span className="w-11 h-11 rounded-lg bg-qpurple text-white flex items-center justify-center shrink-0" aria-hidden="true">
+                  <Brain size={24} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-black text-qpurple">Comprehension Questions</div>
+                  <div className="text-sm text-purple-800 dark:text-purple-300 font-semibold">Study {comprehensionCount} long-answer explanations separately</div>
+                </div>
+                <span className="text-qpurple font-black" aria-hidden="true">&rarr;</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {set.arguments && argumentCount === 0 && (
           <button
             onClick={() => onArgumentBuilder(setId)}
             className="w-full mb-4 p-4 rounded-lg border-2 border-qorange bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors flex items-center gap-4 text-left"
@@ -56,7 +96,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onB
             <span className="w-11 h-11 rounded-lg bg-qorange text-white flex items-center justify-center text-2xl font-black shrink-0" aria-hidden="true">&equiv;</span>
             <div className="min-w-0 flex-1">
               <div className="font-black text-qorange">Argument Builder</div>
-              <div className="text-sm text-orange-800 dark:text-orange-300 font-semibold">Reconstruct {set.arguments.filter(argument => argument.builder !== false).length} arguments from shuffled dropdown choices</div>
+              <div className="text-sm text-orange-800 dark:text-orange-300 font-semibold">Reconstruct arguments from shuffled dropdown choices</div>
             </div>
             <span className="text-qorange font-black" aria-hidden="true">&rarr;</span>
           </button>
@@ -67,7 +107,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onB
           <button onClick={() => onLearn(setId)}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-qblue bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
             <span className="text-2xl">🃏</span>
-            <span className="font-black text-qblue text-sm">Learn</span>
+            <span className="font-black text-qblue text-sm">Flashcards</span>
           </button>
           <button onClick={() => onTest(setId, 'written')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qblue hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group">
@@ -103,7 +143,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onB
         <section className="border-y border-gray-200 dark:border-gray-700 py-5 mb-6">
           <div className="flex items-center justify-between gap-4 mb-3">
             <h2 className="font-black text-lg text-gray-900 dark:text-white">Priority review</h2>
-            <span className="text-xs font-black text-qorange uppercase">Test 1 focus</span>
+            <span className="text-xs font-black text-qorange uppercase">{focusLabel} focus</span>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {set.focusAreas.map((area, index) => (
