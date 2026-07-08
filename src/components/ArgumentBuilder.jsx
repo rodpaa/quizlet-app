@@ -21,6 +21,7 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
   const { getSet } = useSets();
   const set = getSet(setId);
   const argumentsList = (set?.arguments || []).filter(argument => argument.builder !== false);
+  const [courseLabel, testLabel] = (set?.title || 'Study set').split(':').map(part => part.trim());
   const [exercises, setExercises] = useState(() => buildExercises(argumentsList));
 
   if (!set || argumentsList.length === 0) return null;
@@ -79,7 +80,7 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
           className="flex items-center gap-2 text-sm font-black text-gray-500 dark:text-gray-400 hover:text-qblue transition-colors"
         >
           <span aria-hidden="true">&larr;</span>
-          PHI 2010
+          {courseLabel}
         </button>
         <div className="text-sm font-black text-gray-500 dark:text-gray-400">
           {masteredCount} / {argumentsList.length} mastered
@@ -89,7 +90,9 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
       <header className="border-b border-gray-200 dark:border-gray-700 pb-7 mb-7">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
           <div>
-            <div className="text-xs font-black uppercase text-qorange mb-2">PHI 2010 &middot; Test 1</div>
+            <div className="text-xs font-black uppercase text-qorange mb-2">
+              {courseLabel}{testLabel ? <> &middot; {testLabel}</> : null}
+            </div>
             <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-2">Argument reconstruction</h1>
             <p className="max-w-2xl text-gray-500 dark:text-gray-400 font-semibold">
               Rebuild each argument by choosing the correct statement for every labeled step.
