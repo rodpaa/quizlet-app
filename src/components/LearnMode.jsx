@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import { playFlip, playCorrect, playWrong, playCelebration } from '../utils/sound';
 
 function buildStudyCards(set) {
@@ -7,6 +7,7 @@ function buildStudyCards(set) {
 }
 
 export default function LearnMode({ setId, onBack }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const [cards, setCards] = useState(() => buildStudyCards(set));
   const [index, setIndex] = useState(0);

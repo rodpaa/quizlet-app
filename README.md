@@ -1,7 +1,8 @@
 # Quizlet Study App
 
-A browser-based study app with flashcards, written and multiple-choice tests,
-matching exercises, and PHI 2010 argument reconstruction drills.
+A browser-based study app with user accounts, public and private flashcard
+libraries, written and multiple-choice tests, matching exercises, and PHI 2010
+argument reconstruction drills.
 
 ## Live Site
 
@@ -22,6 +23,35 @@ npm run dev
 ```
 
 Open the local URL printed by Vite, normally `http://localhost:5173/`.
+
+Without Supabase environment variables the app runs in local demo mode. Demo
+sets remain in the current browser and are not shared online.
+
+## Accounts and Cloud Sets
+
+The production account and privacy model uses Supabase Auth, Postgres, and Row
+Level Security.
+
+1. Create a Supabase project.
+2. Open the SQL editor and run
+   `supabase/migrations/20260707000000_user_flashcard_sets.sql`.
+3. Copy `.env.example` to `.env.local` and add the project URL and publishable
+   anon key.
+4. In Supabase Auth URL Configuration, add the local URL and the deployed
+   GitHub Pages URL as allowed redirect URLs.
+5. Restart `npm run dev`.
+
+For GitHub Pages, add these repository variables under **Settings > Secrets and
+variables > Actions > Variables** before deploying:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+The deployment workflow injects them into the Vite production build. Use only
+the browser-safe publishable key; never add a Supabase secret key to GitHub.
+
+Only owners can read private sets. Public sets are readable by signed-out users,
+and only an owner can create, edit, or delete their sets.
 
 ## Commands
 

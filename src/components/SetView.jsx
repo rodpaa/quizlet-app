@@ -1,25 +1,50 @@
-import { getSet } from '../data/sets';
+import { ArrowLeft, Edit3, Globe2, Lock, Trash2, UserRound } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useSets } from '../context/SetsContext';
 
-export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onBack }) {
+export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onBack, onEdit }) {
+  const { user } = useAuth();
+  const { getSet, deleteSet } = useSets();
   const set = getSet(setId);
   if (!set) return null;
+  const isOwner = set.ownerId === user?.id;
+
+  const remove = async () => {
+    if (!window.confirm(`Delete "${set.title}"? This cannot be undone.`)) return;
+    try {
+      await deleteSet(set.id);
+      onBack('mine');
+    } catch (error) {
+      window.alert(error.message);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <button onClick={onBack} className="flex items-center gap-1 text-gray-500 dark:text-gray-400 font-semibold hover:text-qblue mb-6 transition-colors">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-        </svg>
+      <button onClick={() => onBack()} className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-semibold hover:text-qblue mb-6 transition-colors">
+        <ArrowLeft size={17} />
         Back
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 mb-6">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-8 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
           <span className="text-5xl">{set.emoji}</span>
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-1">{set.title}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-1 break-words">{set.title}</h1>
+              {isOwner && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => onEdit(set.id)} className="icon-button" aria-label="Edit set" title="Edit set"><Edit3 size={18} /></button>
+                  <button onClick={remove} className="icon-button text-qred" aria-label="Delete set" title="Delete set"><Trash2 size={18} /></button>
+                </div>
+              )}
+            </div>
             <p className="text-gray-500 dark:text-gray-400 font-medium">{set.description}</p>
-            <span className="inline-block mt-2 text-sm font-bold text-qblue">{set.cards.length} terms</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-sm font-bold">
+              <span className="text-qblue">{set.cards.length} terms</span>
+              <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400"><UserRound size={15} /> {isOwner ? 'Created by you' : set.authorName}</span>
+              <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">{set.isPublic ? <Globe2 size={15} /> : <Lock size={15} />} {set.isPublic ? 'Public' : 'Private'}</span>
+            </div>
           </div>
         </div>
 
@@ -62,14 +87,16 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onTest, onB
         </div>
 
         {/* Combined exam button */}
-        <button onClick={() => onTest(setId, 'combined')}
-          className="w-full p-4 rounded-xl border-2 border-qpink bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors flex items-center justify-center gap-3">
-          <span className="text-2xl">📝</span>
-          <div className="text-left">
-            <div className="font-black text-qpink text-sm">Examen Completo</div>
-            <div className="text-xs text-pink-500 dark:text-pink-400 font-medium">Match + Multiple Choice + Written — todo en uno</div>
-          </div>
-        </button>
+        {set.cards.length >= 3 && (
+          <button onClick={() => onTest(setId, 'combined')}
+            className="w-full p-4 rounded-xl border-2 border-qpink bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors flex items-center justify-center gap-3">
+            <span className="text-2xl">📝</span>
+            <div className="text-left">
+              <div className="font-black text-qpink text-sm">Examen Completo</div>
+              <div className="text-xs text-pink-500 dark:text-pink-400 font-medium">Match + Multiple Choice + Written — todo en uno</div>
+            </div>
+          </button>
+        )}
       </div>
 
       {set.focusAreas && (

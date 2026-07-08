@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import { playCorrect, playWrong, playCelebration } from '../utils/sound';
 
 function shuffle(arr) {
@@ -36,6 +36,7 @@ function isCorrect(userAnswer, correctAnswer) {
 }
 
 export default function TestWritten({ setId, onBack, initialCards, onComplete }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const pool = initialCards || set.cards;
   const [questions] = useState(() => shuffle(pool));

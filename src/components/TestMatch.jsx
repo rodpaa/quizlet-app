@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import { playWrong, playMatchComplete, playCelebration } from '../utils/sound';
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
@@ -10,6 +10,7 @@ const TILE_SELECTED = 'bg-qblue dark:bg-qblue hover:bg-qblue2 text-white';
 const TILE_WRONG = 'bg-red-700 dark:bg-red-700 text-white animate-shake';
 
 export default function TestMatch({ setId, onBack, initialCards, onComplete }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const gameCards = (initialCards || set.cards).slice(0, 6);
 

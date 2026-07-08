@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import { playCelebration, playCorrect, playWrong } from '../utils/sound';
 
 function shuffle(items) {
@@ -18,6 +18,7 @@ function buildExercises(argumentsList) {
 }
 
 export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const argumentsList = (set?.arguments || []).filter(argument => argument.builder !== false);
   const [exercises, setExercises] = useState(() => buildExercises(argumentsList));

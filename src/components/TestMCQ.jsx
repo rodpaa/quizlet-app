@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import { playCorrect, playWrong, playCelebration } from '../utils/sound';
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
@@ -16,6 +16,7 @@ function buildQuestions(cards, allCards) {
 const optionLabels = ['A', 'B', 'C', 'D'];
 
 export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const pool = set.cards; // full set for distractors
   const cards = initialCards || set.cards;

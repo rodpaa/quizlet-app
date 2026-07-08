@@ -7,13 +7,20 @@ import TestMCQ from './components/TestMCQ';
 import TestMatch from './components/TestMatch';
 import CombinedTest from './components/CombinedTest';
 import ArgumentBuilder from './components/ArgumentBuilder';
+import AuthModal from './components/AuthModal';
+import SetEditor from './components/SetEditor';
+import { useSets } from './context/SetsContext';
 import { useState } from 'react';
 
 export default function App() {
-  const [page, setPage] = useState({ type: 'home' });
+  const { getSet } = useSets();
+  const [page, setPage] = useState({ type: 'home', tab: 'discover' });
+  const [authModal, setAuthModal] = useState({ open: false, mode: 'signin' });
 
-  const goHome = () => setPage({ type: 'home' });
+  const goHome = (tab = 'discover') => setPage({ type: 'home', tab });
   const goSet = (id) => setPage({ type: 'set', id });
+  const goCreate = () => setPage({ type: 'editor' });
+  const goEdit = (id) => setPage({ type: 'editor', id });
   const goLearn = (id) => setPage({ type: 'learn', id });
   const goArgumentBuilder = (id) => setPage({ type: 'argument-builder', id });
   const goTest = (id, mode) => setPage({ type: 'test', id, mode });
@@ -22,9 +29,32 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-qbg dark:bg-gray-900 transition-colors">
-      {!hideNav && <Navbar onHome={goHome} />}
+      {!hideNav && (
+        <Navbar
+          onHome={goHome}
+          onCreate={goCreate}
+          onRequestAuth={(mode) => setAuthModal({ open: true, mode })}
+        />
+      )}
 
-      {page.type === 'home' && <Home onSelectSet={goSet} />}
+      {page.type === 'home' && (
+        <Home
+          key={page.tab}
+          initialTab={page.tab}
+          onSelectSet={goSet}
+          onCreate={goCreate}
+          onEdit={goEdit}
+          onRequestAuth={(mode) => setAuthModal({ open: true, mode })}
+        />
+      )}
+
+      {page.type === 'editor' && (
+        <SetEditor
+          initialSet={page.id ? getSet(page.id) : null}
+          onCancel={() => page.id ? goSet(page.id) : goHome('mine')}
+          onSaved={goSet}
+        />
+      )}
 
       {page.type === 'set' && (
         <SetView
@@ -33,6 +63,7 @@ export default function App() {
           onArgumentBuilder={goArgumentBuilder}
           onTest={goTest}
           onBack={goHome}
+          onEdit={goEdit}
         />
       )}
 
@@ -62,6 +93,14 @@ export default function App() {
 
       {page.type === 'test' && page.mode === 'combined' && (
         <CombinedTest setId={page.id} onBack={() => goSet(page.id)} />
+      )}
+
+      {authModal.open && (
+        <AuthModal
+          open
+          initialMode={authModal.mode}
+          onClose={() => setAuthModal((current) => ({ ...current, open: false }))}
+        />
       )}
     </div>
   );

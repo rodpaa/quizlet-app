@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSet } from '../data/sets';
+import { useSets } from '../context/SetsContext';
 import TestMatch from './TestMatch';
 import TestMCQ from './TestMCQ';
 import TestWritten from './TestWritten';
@@ -29,6 +29,7 @@ function PhaseHeader({ phase, total }) {
 }
 
 export default function CombinedTest({ setId, onBack }) {
+  const { getSet } = useSets();
   const set = getSet(setId);
   const [phase, setPhase] = useState(0); // 0=match 1=mcq 2=written 3=done
   const [scores, setScores] = useState({ mcq: null, written: null });
