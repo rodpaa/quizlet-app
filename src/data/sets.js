@@ -326,17 +326,6 @@ export const flashcardSets = [
           { id: 'SC4', text: "Therefore, I am morally required to save a starving child's life by donating $50." },
         ],
       },
-      {
-        id: 'ms',
-        title: 'The Moral Saints Argument',
-        shortTitle: 'MS',
-        source: 'Arguments',
-        steps: [
-          { id: 'MS1', text: "A moral saint's life contains no non-moral virtues." },
-          { id: 'MS2', text: 'A well-rounded, flourishing human life includes non-moral virtues.' },
-          { id: 'MS3', text: 'Therefore, moral sainthood is not a desirable ideal for the good life.' },
-        ],
-      },
     ],
   },
   // Spanish Basics flashcard set
