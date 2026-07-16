@@ -13,7 +13,12 @@ function buildQuestions(cards, allCards) {
   });
 }
 
+const CHECKPOINT_PORTION = 0.15;
 const optionLabels = ['A', 'B', 'C', 'D'];
+
+function checkpointSizeFor(total) {
+  return Math.max(1, Math.ceil(total * CHECKPOINT_PORTION));
+}
 
 export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   const { getSet } = useSets();
@@ -26,7 +31,20 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
   const [retryWrong, setRetryWrong] = useState(false);
+  const [checkpointPause, setCheckpointPause] = useState(null);
   const isRetry = Boolean(initialCards) && !onComplete;
+  const useCheckpoints = !initialCards && !onComplete && questions.length > 1;
+  const checkpointSize = useCheckpoints ? checkpointSizeFor(questions.length) : questions.length || 1;
+  const totalCheckpoints = Math.ceil(questions.length / checkpointSize);
+  const currentCheckpointStartIndex = Math.floor(index / checkpointSize) * checkpointSize;
+  const currentCheckpointEndIndex = Math.min(currentCheckpointStartIndex + checkpointSize, questions.length);
+  const currentCheckpointNumber = Math.floor(index / checkpointSize) + 1;
+  const currentCheckpointLength = currentCheckpointEndIndex - currentCheckpointStartIndex;
+  const checkpointQuestionNumber = index - currentCheckpointStartIndex + 1;
+  const answeredProgress = selected === null ? checkpointQuestionNumber - 1 : checkpointQuestionNumber;
+  const progressTotal = useCheckpoints ? currentCheckpointLength : questions.length;
+  const progressDone = useCheckpoints ? answeredProgress : index + (selected === null ? 0 : 1);
+  const progressPct = progressTotal > 0 ? Math.min(100, (progressDone / progressTotal) * 100) : 0;
 
   const current = questions[index];
 
@@ -39,14 +57,28 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   };
 
   const next = () => {
+    const answeredCount = index + 1;
+    const isCheckpointBoundary = useCheckpoints && answeredCount < questions.length && answeredCount === currentCheckpointEndIndex;
+
     setSelected(null);
-    if (index + 1 >= questions.length) {
+    if (answeredCount >= questions.length) {
       playCelebration();
       setDone(true);
-      onComplete && onComplete(results.filter(r => r.correct).length + (selected === current.card.id ? 1 : 0), questions.length);
+      onComplete && onComplete(results.filter(r => r.correct).length, questions.length);
+    } else if (isCheckpointBoundary) {
+      setCheckpointPause({
+        number: currentCheckpointNumber,
+        startIndex: currentCheckpointStartIndex,
+        endIndex: answeredCount,
+      });
     } else {
       setIndex(i => i + 1);
     }
+  };
+
+  const continueCheckpoint = () => {
+    setCheckpointPause(null);
+    setIndex(i => Math.min(i + 1, questions.length - 1));
   };
 
   const optionState = (option) => {
@@ -57,6 +89,81 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   };
 
   const correctCount = results.filter(r => r.correct).length;
+
+  if (checkpointPause) {
+    const checkpointResults = results.slice(checkpointPause.startIndex, checkpointPause.endIndex);
+    const checkpointCorrect = checkpointResults.filter(r => r.correct);
+    const checkpointWrong = checkpointResults.filter(r => !r.correct);
+    const checkpointPct = Math.round((checkpointCorrect.length / checkpointResults.length) * 100);
+    const nextStart = checkpointPause.endIndex + 1;
+    const nextEnd = Math.min(checkpointPause.endIndex + checkpointSize, questions.length);
+    const overallPct = Math.round((correctCount / checkpointPause.endIndex) * 100);
+
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="text-center mb-8">
+          <div className="text-sm font-black text-qgreen uppercase tracking-wide mb-2">
+            Checkpoint {checkpointPause.number} of {totalCheckpoints}
+          </div>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-1">Checkpoint Complete</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">
+            Terms {checkpointPause.startIndex + 1}-{checkpointPause.endIndex} of {questions.length}
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
+          <div className="flex justify-between mb-3">
+            <span className="font-black text-qgreen text-lg">✓ {checkpointCorrect.length} correct</span>
+            <span className="font-black text-qred text-lg">✗ {checkpointWrong.length} incorrect</span>
+          </div>
+          <div className="progress-bar mb-3">
+            <div className="progress-fill" style={{ width: `${checkpointPct}%` }} />
+          </div>
+          <div className="flex justify-between text-sm font-bold text-gray-500 dark:text-gray-400">
+            <span>This checkpoint: {checkpointPct}%</span>
+            <span>Overall so far: {overallPct}%</span>
+          </div>
+        </div>
+
+        {checkpointWrong.length > 0 && (
+          <div className="mb-6">
+            <h2 className="font-black text-gray-900 dark:text-white text-lg mb-3 flex items-center gap-2">
+              <span className="text-qred">✗</span> Review from this checkpoint
+            </h2>
+            <div className="space-y-2">
+              {checkpointWrong.map(({ card, chosen }) => (
+                <div key={card.id} className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 rounded-xl p-4">
+                  <div className="font-black text-gray-900 dark:text-white mb-2">{card.term}</div>
+                  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Your answer</span>
+                      <div className="text-qred font-semibold mt-0.5">{chosen}</div>
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Correct</span>
+                      <div className="text-qgreen font-semibold mt-0.5">{card.definition}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sticky bottom-4">
+          <button
+            onClick={continueCheckpoint}
+            className="w-full py-4 rounded-xl font-black text-white bg-qblue hover:bg-qblue2 transition-colors text-base"
+          >
+            Continue to checkpoint {checkpointPause.number + 1} · terms {nextStart}-{nextEnd}
+          </button>
+          <button onClick={onBack} className="w-full py-3.5 rounded-xl font-black text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 hover:border-gray-300 transition-colors">
+            Finish for now
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (done && retryWrong) {
     const wrongCards = results.filter(r => !r.correct).map(r => r.card);
@@ -165,11 +272,15 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
         ) : (
           <div className="text-sm font-black text-qgreen uppercase tracking-wide">Section 2 · Multiple Choice</div>
         )}
-        <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{index + 1} / {questions.length}</span>
+        <span className="text-sm font-bold text-gray-500 dark:text-gray-400">
+          {useCheckpoints
+            ? `Checkpoint ${currentCheckpointNumber}/${totalCheckpoints} · ${checkpointQuestionNumber}/${currentCheckpointLength}`
+            : `${index + 1} / ${questions.length}`}
+        </span>
       </div>
 
       <div className="progress-bar mb-8">
-        <div className="progress-fill" style={{ width: `${(index / questions.length) * 100}%` }} />
+        <div className="progress-fill" style={{ width: `${progressPct}%` }} />
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 mb-6 shadow-sm animate-slide-up">
@@ -208,7 +319,7 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
 
       {selected !== null && (
         <button onClick={next} className="w-full py-4 rounded-xl font-black text-white bg-qblue hover:bg-qblue2 transition-colors text-lg animate-slide-up">
-          {index + 1 >= questions.length ? (onComplete ? 'Continue →' : 'See Results') : 'Next Question →'}
+          {index + 1 >= questions.length ? (onComplete ? 'Continue →' : 'See Results') : useCheckpoints && index + 1 === currentCheckpointEndIndex ? 'View Checkpoint →' : 'Next Question →'}
         </button>
       )}
 
