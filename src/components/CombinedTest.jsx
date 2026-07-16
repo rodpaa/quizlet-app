@@ -61,7 +61,7 @@ export default function CombinedTest({ setId, onBack }) {
         </p>
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-8 text-left space-y-4">
           {[
-            { icon: '🔗', label: 'Section 1 — Match', color: 'text-qyellow', desc: `Match ${totals[0]} term-author pairs` },
+            { icon: '🔗', label: 'Section 1 — Match', color: 'text-qyellow', desc: `Match ${totals[0]} term-definition pairs` },
             { icon: '🎯', label: 'Section 2 — Multiple Choice', color: 'text-qgreen', desc: `${totals[1]} multiple choice questions` },
             { icon: '✏️', label: 'Section 3 — Written', color: 'text-qblue', desc: `${totals[2]} free-response questions` },
           ].map((s, i) => (

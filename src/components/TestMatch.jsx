@@ -1,24 +1,40 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { ArrowLeft, ArrowRight, Home, RotateCcw } from 'lucide-react';
 import { useSets } from '../context/SetsContext';
 import { playWrong, playMatchComplete, playCelebration } from '../utils/sound';
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+function buildTiles(cards, seed = 0) {
+  void seed;
+  const terms = cards.map(c => ({ id: `t-${c.id}`, cardId: c.id, text: c.term, type: 'term' }));
+  const defs = cards.map(c => ({ id: `d-${c.id}`, cardId: c.id, text: c.definition, type: 'def' }));
+  return shuffle([...terms, ...defs]);
+}
 
 // Monotone: all tiles same neutral style — NO color pairing hints
 const TILE_BASE = 'bg-slate-500 hover:bg-slate-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-white';
 const TILE_SELECTED = 'bg-qblue dark:bg-qblue hover:bg-qblue2 text-white';
 const TILE_WRONG = 'bg-red-700 dark:bg-red-700 text-white animate-shake';
+const ROUND_SIZE = 6;
 
-export default function TestMatch({ setId, onBack, initialCards, onComplete }) {
+export default function TestMatch({ setId, onBack, onHome, initialCards, onComplete }) {
   const { getSet } = useSets();
   const set = getSet(setId);
-  const gameCards = (initialCards || set.cards).slice(0, 6);
+  const allCards = initialCards || set.cards;
+  const chunkedMode = !initialCards;
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [roundSeed, setRoundSeed] = useState(0);
+  const totalRounds = chunkedMode ? Math.ceil(allCards.length / ROUND_SIZE) : 1;
+  const gameCards = useMemo(() => {
+    if (!chunkedMode) return allCards;
+    const start = roundIndex * ROUND_SIZE;
+    return allCards.slice(start, start + ROUND_SIZE);
+  }, [allCards, chunkedMode, roundIndex]);
+  const roundStart = chunkedMode ? roundIndex * ROUND_SIZE + 1 : 1;
+  const roundEnd = chunkedMode ? Math.min((roundIndex + 1) * ROUND_SIZE, allCards.length) : gameCards.length;
+  const hasMoreRounds = chunkedMode && roundIndex < totalRounds - 1;
 
-  const [tiles] = useState(() => {
-    const terms = gameCards.map(c => ({ id: `t-${c.id}`, cardId: c.id, text: c.term, type: 'term' }));
-    const defs  = gameCards.map(c => ({ id: `d-${c.id}`, cardId: c.id, text: c.definition, type: 'def' }));
-    return shuffle([...terms, ...defs]);
-  });
+  const tiles = useMemo(() => buildTiles(gameCards, roundSeed), [gameCards, roundSeed]);
 
   const [matched, setMatched] = useState(new Set());
   const [selected, setSelected] = useState(null);
@@ -72,17 +88,63 @@ export default function TestMatch({ setId, onBack, initialCards, onComplete }) {
     return TILE_BASE;
   };
 
+  const resetRoundState = () => {
+    setMatched(new Set());
+    setSelected(null);
+    setWrongPair(null);
+    setDone(false);
+    setRunning(true);
+    setRoundSeed(seed => seed + 1);
+  };
+
+  const goNextRound = () => {
+    if (!hasMoreRounds) return;
+    setRoundIndex(index => index + 1);
+    resetRoundState();
+  };
+
+  const restartAll = () => {
+    setTime(0);
+    setMistakes(0);
+    setRoundIndex(0);
+    resetRoundState();
+  };
+
+  const returnHome = () => {
+    if (onHome) onHome();
+    else onBack();
+  };
+
   if (done && !onComplete) {
+    const title = hasMoreRounds ? 'Round Complete!' : 'All Vocab Complete!';
+    const detail = hasMoreRounds
+      ? `Matched terms ${roundStart}-${roundEnd} of ${allCards.length}.`
+      : `Matched all ${allCards.length} terms.`;
+
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="text-center animate-bounce-in">
+        <div className="w-full max-w-md text-center animate-bounce-in">
           <div className="text-7xl mb-4">🎉</div>
           <div className="text-5xl mb-4">{mistakes === 0 ? '⭐⭐⭐' : mistakes <= 2 ? '⭐⭐' : '⭐'}</div>
-          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2">Match Complete!</h1>
+          <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2">{title}</h1>
+          <p className="text-gray-600 dark:text-blue-300 font-semibold mb-2">{detail}</p>
           <p className="text-gray-600 dark:text-blue-300 font-semibold mb-8">Time: {fmt(time)} · {mistakes} mistake{mistakes !== 1 ? 's' : ''}</p>
-          <div className="flex gap-3">
-            <button onClick={onBack} className="flex-1 py-3 px-6 rounded-xl font-black text-gray-700 dark:text-white border-2 border-gray-300 dark:border-white/20 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">Back to Set</button>
-            <button onClick={() => window.location.reload()} className="flex-1 py-3 px-6 rounded-xl font-black text-gray-900 bg-qyellow hover:bg-yellow-300 transition-colors">Play Again</button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={returnHome} className="secondary-button flex-1 justify-center">
+              <Home size={18} />
+              Return Home
+            </button>
+            {hasMoreRounds ? (
+              <button onClick={goNextRound} className="primary-button flex-1 justify-center bg-qyellow text-gray-900 hover:bg-yellow-300">
+                Next Set
+                <ArrowRight size={18} />
+              </button>
+            ) : (
+              <button onClick={restartAll} className="primary-button flex-1 justify-center bg-qyellow text-gray-900 hover:bg-yellow-300">
+                <RotateCcw size={18} />
+                Play Again
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -95,9 +157,7 @@ export default function TestMatch({ setId, onBack, initialCards, onComplete }) {
         <div className="flex items-center justify-between mb-8">
           {!onComplete ? (
             <button onClick={onBack} className="flex items-center gap-1 text-gray-500 dark:text-blue-300 font-semibold hover:text-qblue dark:hover:text-white transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ArrowLeft size={17} strokeWidth={2.5} />
               {set.title}
             </button>
           ) : (
@@ -109,7 +169,13 @@ export default function TestMatch({ setId, onBack, initialCards, onComplete }) {
           </div>
         </div>
 
-        <p className="text-center text-gray-500 dark:text-blue-300 font-semibold mb-8">Click a term, then its matching author</p>
+        {chunkedMode && totalRounds > 1 && (
+          <div className="text-center text-sm font-black text-qpurple dark:text-purple-300 mb-3">
+            Round {roundIndex + 1} of {totalRounds} · Terms {roundStart}-{roundEnd} of {allCards.length}
+          </div>
+        )}
+
+        <p className="text-center text-gray-500 dark:text-blue-300 font-semibold mb-8">Click a term, then its matching definition</p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {tiles.map(tile => (

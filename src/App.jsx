@@ -100,7 +100,7 @@ export default function App() {
       )}
 
       {page.type === 'test' && page.mode === 'match' && (
-        <TestMatch setId={page.id} onBack={() => goSet(page.id)} />
+        <TestMatch setId={page.id} onBack={() => goSet(page.id)} onHome={goHome} />
       )}
 
       {page.type === 'test' && page.mode === 'combined' && (
