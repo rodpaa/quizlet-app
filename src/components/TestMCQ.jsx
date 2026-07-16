@@ -25,6 +25,8 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   const [selected, setSelected] = useState(null);
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
+  const [retryWrong, setRetryWrong] = useState(false);
+  const isRetry = Boolean(initialCards) && !onComplete;
 
   const current = questions[index];
 
@@ -56,29 +58,96 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
 
   const correctCount = results.filter(r => r.correct).length;
 
+  if (done && retryWrong) {
+    const wrongCards = results.filter(r => !r.correct).map(r => r.card);
+    return (
+      <TestMCQ
+        setId={setId}
+        onBack={onBack}
+        initialCards={wrongCards}
+      />
+    );
+  }
+
   if (done && !onComplete) {
+    const wrong = results.filter(r => !r.correct);
+    const correct = results.filter(r => r.correct);
     const pct = Math.round((correctCount / questions.length) * 100);
     return (
-      <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <div className="text-8xl mb-6 animate-bounce-in">{pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚'}</div>
-        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2">Test Complete!</h1>
-        <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">You scored {pct}%</p>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-8">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="text-3xl font-black text-qgreen">{correctCount}</div>
-              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1">Correct</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-qred">{questions.length - correctCount}</div>
-              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1">Incorrect</div>
-            </div>
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        <div className="text-center mb-8">
+          <div className="text-7xl mb-4 animate-bounce-in">{pct >= 80 ? '🏆' : pct >= 60 ? '👍' : '📚'}</div>
+          <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-1">Test Complete!</h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">You scored {pct}%</p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
+          <div className="flex justify-between mb-3">
+            <span className="font-black text-qgreen text-lg">✓ {correct.length} correct</span>
+            <span className="font-black text-qred text-lg">✗ {wrong.length} incorrect</span>
           </div>
-          <div className="mt-4 progress-bar">
+          <div className="progress-bar">
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <button onClick={onBack} className="w-full py-3 rounded-xl font-black text-white bg-qblue hover:bg-qblue2 transition-colors">Back to Set</button>
+
+        {wrong.length > 0 && (
+          <div className="mb-6">
+            <h2 className="font-black text-gray-900 dark:text-white text-lg mb-3 flex items-center gap-2">
+              <span className="text-qred">✗</span> Still learning ({wrong.length})
+            </h2>
+            <div className="space-y-2">
+              {wrong.map(({ card, chosen }) => (
+                <div key={card.id} className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900 rounded-xl p-4">
+                  <div className="font-black text-gray-900 dark:text-white mb-2">{card.term}</div>
+                  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Your answer</span>
+                      <div className="text-qred font-semibold mt-0.5">{chosen}</div>
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Correct</span>
+                      <div className="text-qgreen font-semibold mt-0.5">{card.definition}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {correct.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-black text-gray-900 dark:text-white text-lg mb-3 flex items-center gap-2">
+              <span className="text-qgreen">✓</span> Got it ({correct.length})
+            </h2>
+            <div className="space-y-2">
+              {correct.map(({ card }) => (
+                <div key={card.id} className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-black text-gray-900 dark:text-white">{card.term}</div>
+                    <div className="text-sm text-qgreen font-semibold mt-0.5">{card.definition}</div>
+                  </div>
+                  <span className="text-green-500 text-xl">✓</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sticky bottom-4">
+          {wrong.length > 0 && (
+            <button
+              onClick={() => setRetryWrong(true)}
+              className="w-full py-4 rounded-xl font-black text-white bg-qred hover:bg-red-700 transition-colors text-base flex items-center justify-center gap-2"
+            >
+              <span>🔁</span> Test {wrong.length} wrong answer{wrong.length !== 1 ? 's' : ''} again
+            </button>
+          )}
+          <button onClick={onBack} className="w-full py-3.5 rounded-xl font-black text-white bg-qblue hover:bg-qblue2 transition-colors">
+            Back to Set
+          </button>
+        </div>
       </div>
     );
   }
@@ -91,7 +160,7 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
-            Multiple Choice
+            Multiple Choice {isRetry ? '· Wrong answers' : ''}
           </button>
         ) : (
           <div className="text-sm font-black text-qgreen uppercase tracking-wide">Section 2 · Multiple Choice</div>
@@ -104,7 +173,9 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 mb-6 shadow-sm animate-slide-up">
-        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">Choose the correct author:</div>
+        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
+          {isRetry ? 'Wrong answer — try again:' : 'Choose the correct author:'}
+        </div>
         <div className="text-2xl font-black text-gray-900 dark:text-white">{current.card.term}</div>
       </div>
 
