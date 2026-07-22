@@ -11,6 +11,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
   const argumentCount = set.arguments?.filter(argument => argument.builder !== false).length || 0;
   const comprehensionCount = set.comprehensionQuestions?.length || 0;
   const focusLabel = set.title.includes(':') ? set.title.split(':')[1].trim() : 'Focus';
+  const cardsReadyForPractice = set.cards.length > 0 && set.cards.every((card) => !card.pending);
 
   const remove = async () => {
     if (!window.confirm(`Delete "${set.title}"? This cannot be undone.`)) return;
@@ -103,31 +104,40 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
         )}
 
         {/* Study modes grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-          <button onClick={() => onLearn(setId)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-qblue bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-            <span className="text-2xl">🃏</span>
-            <span className="font-black text-qblue text-sm">Flashcards</span>
-          </button>
-          <button onClick={() => onTest(setId, 'written')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qblue hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group">
-            <span className="text-2xl">✏️</span>
-            <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qblue text-sm">Written</span>
-          </button>
-          <button onClick={() => onTest(setId, 'mcq')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qgreen hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group">
-            <span className="text-2xl">🎯</span>
-            <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qgreen text-sm">MCQ</span>
-          </button>
-          <button onClick={() => onTest(setId, 'match')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qpurple hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group">
-            <span className="text-2xl">🔗</span>
-            <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qpurple text-sm">Match</span>
-          </button>
-        </div>
+        {cardsReadyForPractice ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            <button onClick={() => onLearn(setId)}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-qblue bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+              <span className="text-2xl">🃏</span>
+              <span className="font-black text-qblue text-sm">Flashcards</span>
+            </button>
+            <button onClick={() => onTest(setId, 'written')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qblue hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group">
+              <span className="text-2xl">✏️</span>
+              <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qblue text-sm">Written</span>
+            </button>
+            <button onClick={() => onTest(setId, 'mcq')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qgreen hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors group">
+              <span className="text-2xl">🎯</span>
+              <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qgreen text-sm">MCQ</span>
+            </button>
+            <button onClick={() => onTest(setId, 'match')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-qpurple hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group">
+              <span className="text-2xl">🔗</span>
+              <span className="font-black text-gray-700 dark:text-gray-300 group-hover:text-qpurple text-sm">Match</span>
+            </button>
+          </div>
+        ) : (
+          <aside className="mb-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-900/20 p-4">
+            <div className="font-black text-qblue">Flashcard practice pending</div>
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mt-1">
+              Add the pending definitions before running flashcards, written, MCQ, matching, or the combined exam.
+            </p>
+          </aside>
+        )}
 
         {/* Combined exam button */}
-        {set.cards.length >= 3 && (
+        {cardsReadyForPractice && set.cards.length >= 3 && (
           <button onClick={() => onTest(setId, 'combined')}
             className="w-full p-4 rounded-xl border-2 border-qpink bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors flex items-center justify-center gap-3">
             <span className="text-2xl">📝</span>

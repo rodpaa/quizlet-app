@@ -22,6 +22,7 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
   const set = getSet(setId);
   const argumentsList = (set?.arguments || []).filter(argument => argument.builder !== false);
   const [courseLabel, testLabel] = (set?.title || 'Study set').split(':').map(part => part.trim());
+  const cardsReadyForPractice = set?.cards?.length > 0 && set.cards.every((card) => !card.pending);
   const [exercises, setExercises] = useState(() => buildExercises(argumentsList));
 
   if (!set || argumentsList.length === 0) return null;
@@ -113,12 +114,14 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
           >
             Argument Builder
           </button>
-          <button
-            onClick={onFlashcards}
-            className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-qblue hover:text-qblue transition-colors"
-          >
-            Flashcards
-          </button>
+          {cardsReadyForPractice && (
+            <button
+              onClick={onFlashcards}
+              className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-qblue hover:text-qblue transition-colors"
+            >
+              Flashcards
+            </button>
+          )}
         </div>
       </header>
 

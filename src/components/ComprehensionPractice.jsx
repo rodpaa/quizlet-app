@@ -12,6 +12,7 @@ export default function ComprehensionPractice({ setId, onBack, onArgumentBuilder
   const [masteredIds, setMasteredIds] = useState([]);
   const [reviewIds, setReviewIds] = useState([]);
   const [courseLabel, testLabel] = (set?.title || 'Study set').split(':').map(part => part.trim());
+  const cardsReadyForPractice = set?.cards?.length > 0 && set.cards.every((card) => !card.pending);
 
   if (!set || questions.length === 0) return null;
 
@@ -93,13 +94,15 @@ export default function ComprehensionPractice({ setId, onBack, onArgumentBuilder
             <Brain size={17} />
             Comprehension
           </button>
-          <button
-            onClick={onFlashcards}
-            className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-qblue hover:text-qblue transition-colors flex items-center gap-2"
-          >
-            <BookOpenCheck size={17} />
-            Flashcards
-          </button>
+          {cardsReadyForPractice && (
+            <button
+              onClick={onFlashcards}
+              className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-qblue hover:text-qblue transition-colors flex items-center gap-2"
+            >
+              <BookOpenCheck size={17} />
+              Flashcards
+            </button>
+          )}
           {set.arguments && (
             <button
               onClick={onArgumentBuilder}
