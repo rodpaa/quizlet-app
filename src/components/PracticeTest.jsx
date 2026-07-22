@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useSets } from '../context/SetsContext';
 import { playCelebration, playCorrect, playWrong } from '../utils/sound';
 
-const optionLabels = ['A', 'B', 'C', 'D'];
+const optionLabels = ['A', 'B', 'C', 'D', 'E'];
 
 const SECTION_META = {
   studyGuide: {
@@ -57,7 +57,7 @@ function getBlueprint(set) {
     : { label: 'Test 1 shape', argument: 10, definition: 10, application: 10 };
 }
 
-function buildChoices(correctAnswer, distractorPool) {
+function buildChoices(correctAnswer, distractorPool, choiceCount = 4) {
   const answers = [];
   const seen = new Set();
 
@@ -72,7 +72,7 @@ function buildChoices(correctAnswer, distractorPool) {
   add(correctAnswer);
   shuffle(distractorPool).forEach(add);
 
-  return shuffle(answers.slice(0, 4)).map((text, index) => ({
+  return shuffle(answers.slice(0, choiceCount)).map((text, index) => ({
     id: `choice-${index}`,
     text,
   }));
@@ -187,10 +187,13 @@ function buildExplicitPracticeQuestions(set) {
         prompt: question.prompt,
         answer: question.answer,
         points: question.points || 2,
-        choices: buildChoices(question.answer, [
-          ...explicitAnswers.filter(answer => answer !== question.answer),
-          ...cardAnswers,
-        ]),
+        choices: buildChoices(
+          question.answer,
+          question.distractors?.length
+            ? question.distractors
+            : [...explicitAnswers.filter(answer => answer !== question.answer), ...cardAnswers],
+          question.distractors?.length ? 5 : 4
+        ),
       }))
       .filter(question => question.choices.length > 1)
       .map((question, index) => ({ ...question, number: index + 1 })),
