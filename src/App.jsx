@@ -6,6 +6,7 @@ import TestWritten from './components/TestWritten';
 import TestMCQ from './components/TestMCQ';
 import TestMatch from './components/TestMatch';
 import CombinedTest from './components/CombinedTest';
+import PracticeTest from './components/PracticeTest';
 import ArgumentBuilder from './components/ArgumentBuilder';
 import ComprehensionPractice from './components/ComprehensionPractice';
 import AuthModal from './components/AuthModal';
@@ -105,6 +106,10 @@ export default function App() {
 
       {page.type === 'test' && page.mode === 'combined' && (
         <CombinedTest setId={page.id} onBack={() => goSet(page.id)} />
+      )}
+
+      {page.type === 'test' && page.mode === 'practice' && (
+        <PracticeTest setId={page.id} onBack={() => goSet(page.id)} />
       )}
 
       {authModal.open && (

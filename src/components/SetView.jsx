@@ -1,4 +1,4 @@
-import { ArrowLeft, Brain, Edit3, Globe2, Lock, Network, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, Brain, Edit3, Globe2, Lock, Network, Trash2, UserRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSets } from '../context/SetsContext';
 
@@ -12,6 +12,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
   const comprehensionCount = set.comprehensionQuestions?.length || 0;
   const focusLabel = set.title.includes(':') ? set.title.split(':')[1].trim() : 'Focus';
   const cardsReadyForPractice = set.cards.length > 0 && set.cards.every((card) => !card.pending);
+  const practiceTestReady = cardsReadyForPractice && argumentCount > 0 && set.cards.length >= 10;
 
   const remove = async () => {
     if (!window.confirm(`Delete "${set.title}"? This cannot be undone.`)) return;
@@ -134,6 +135,24 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
               Add the pending definitions before running flashcards, written, MCQ, matching, or the combined exam.
             </p>
           </aside>
+        )}
+
+        {practiceTestReady && (
+          <section className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 mb-3">
+            <button
+              onClick={() => onTest(setId, 'practice')}
+              className="w-full p-4 rounded-lg border-2 border-qteal bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors flex items-center gap-4 text-left"
+            >
+              <span className="w-11 h-11 rounded-lg bg-qteal text-white flex items-center justify-center shrink-0" aria-hidden="true">
+                <BookOpenCheck size={24} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-black text-qteal">Practice Test</div>
+                <div className="text-sm text-cyan-800 dark:text-cyan-300 font-semibold">50-point answer-record format with recall, definitions, and application</div>
+              </div>
+              <span className="text-qteal font-black" aria-hidden="true">&rarr;</span>
+            </button>
+          </section>
         )}
 
         {/* Combined exam button */}
