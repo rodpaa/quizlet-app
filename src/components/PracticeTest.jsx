@@ -6,6 +6,13 @@ import { playCelebration, playCorrect, playWrong } from '../utils/sound';
 const optionLabels = ['A', 'B', 'C', 'D'];
 
 const SECTION_META = {
+  studyGuide: {
+    label: 'Study-guide recall',
+    shortLabel: 'Guide questions',
+    color: 'text-qpurple',
+    bg: 'bg-purple-50 dark:bg-purple-900/20',
+    border: 'border-purple-200 dark:border-purple-900',
+  },
   argument: {
     label: 'Argument-step recall',
     shortLabel: 'Argument recall',
@@ -28,6 +35,8 @@ const SECTION_META = {
     border: 'border-cyan-200 dark:border-cyan-900',
   },
 };
+
+const SECTION_ORDER = ['studyGuide', 'argument', 'definition', 'application'];
 
 function shuffle(items) {
   return [...items].sort(() => Math.random() - 0.5);
@@ -158,7 +167,40 @@ function buildApplicationQuestions(set, count, cards, usedCardIds) {
   ];
 }
 
+function buildExplicitPracticeQuestions(set) {
+  const explicit = (set.practiceQuestions || [])
+    .filter(question => !question.pending && isReadyText(question.prompt) && isReadyText(question.answer));
+
+  if (explicit.length === 0) return null;
+
+  const explicitAnswers = explicit.map(question => question.answer);
+  const cardAnswers = (set.cards || [])
+    .map(card => card.definition)
+    .filter(isReadyText);
+
+  return {
+    blueprint: { label: set.practiceBlueprintLabel || 'Study-guide question set' },
+    questions: explicit
+      .map((question, index) => ({
+        id: question.id || `guide-${index + 1}`,
+        section: question.section || 'studyGuide',
+        prompt: question.prompt,
+        answer: question.answer,
+        points: question.points || 2,
+        choices: buildChoices(question.answer, [
+          ...explicitAnswers.filter(answer => answer !== question.answer),
+          ...cardAnswers,
+        ]),
+      }))
+      .filter(question => question.choices.length > 1)
+      .map((question, index) => ({ ...question, number: index + 1 })),
+  };
+}
+
 function buildPracticeQuestions(set) {
+  const explicitBuild = buildExplicitPracticeQuestions(set);
+  if (explicitBuild) return explicitBuild;
+
   const blueprint = getBlueprint(set);
   const cards = (set.cards || []).filter(card => isReadyText(card.definition));
   const cardAnswers = cards.map(card => card.definition);
@@ -176,14 +218,14 @@ function buildPracticeQuestions(set) {
 }
 
 function summarizeSections(questions) {
-  return ['argument', 'definition', 'application'].map(section => {
+  return SECTION_ORDER.map(section => {
     const sectionQuestions = questions.filter(question => question.section === section);
     return {
       section,
       count: sectionQuestions.length,
       points: sectionQuestions.reduce((sum, question) => sum + question.points, 0),
     };
-  });
+  }).filter(summary => summary.count > 0);
 }
 
 function pct(score, total) {
@@ -435,7 +477,7 @@ export default function PracticeTest({ setId, onBack }) {
     );
   }
 
-  const meta = SECTION_META[current.section];
+  const meta = SECTION_META[current.section] || SECTION_META.application;
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 sm:py-10">

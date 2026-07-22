@@ -10,9 +10,11 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
   const isOwner = set.ownerId === user?.id;
   const argumentCount = set.arguments?.filter(argument => argument.builder !== false).length || 0;
   const comprehensionCount = set.comprehensionQuestions?.length || 0;
+  const explicitPracticeCount = set.practiceQuestions?.filter(question => !question.pending).length || 0;
   const focusLabel = set.title.includes(':') ? set.title.split(':')[1].trim() : 'Focus';
   const cardsReadyForPractice = set.cards.length > 0 && set.cards.every((card) => !card.pending);
-  const practiceTestReady = cardsReadyForPractice && argumentCount > 0 && set.cards.length >= 10;
+  const practiceTestReady = explicitPracticeCount > 0 || (cardsReadyForPractice && argumentCount > 0 && set.cards.length >= 10);
+  const practiceTestLabel = explicitPracticeCount > 0 ? 'Test Version' : 'Practice Test';
 
   const remove = async () => {
     if (!window.confirm(`Delete "${set.title}"? This cannot be undone.`)) return;
@@ -49,6 +51,7 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
               <span className="text-qblue">{set.cards.length} terms</span>
               {argumentCount > 0 && <span className="text-qorange">{argumentCount} arguments</span>}
               {comprehensionCount > 0 && <span className="text-qpurple">{comprehensionCount} comprehension questions</span>}
+              {explicitPracticeCount > 0 && <span className="text-qteal">{explicitPracticeCount} test questions</span>}
               <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400"><UserRound size={15} /> {isOwner ? 'Created by you' : set.authorName}</span>
               <span className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">{set.isPublic ? <Globe2 size={15} /> : <Lock size={15} />} {set.isPublic ? 'Public' : 'Private'}</span>
             </div>
@@ -147,8 +150,12 @@ export default function SetView({ setId, onLearn, onArgumentBuilder, onComprehen
                 <BookOpenCheck size={24} />
               </span>
               <div className="min-w-0 flex-1">
-                <div className="font-black text-qteal">Practice Test</div>
-                <div className="text-sm text-cyan-800 dark:text-cyan-300 font-semibold">50-point answer-record format with recall, definitions, and application</div>
+                <div className="font-black text-qteal">{practiceTestLabel}</div>
+                <div className="text-sm text-cyan-800 dark:text-cyan-300 font-semibold">
+                  {explicitPracticeCount > 0
+                    ? `${explicitPracticeCount} study-guide questions in answer-record format`
+                    : '50-point answer-record format with recall, definitions, and application'}
+                </div>
               </div>
               <span className="text-qteal font-black" aria-hidden="true">&rarr;</span>
             </button>
