@@ -81,7 +81,13 @@ function getBlueprint(set) {
     : { label: 'Test 1 shape', argument: 10, definition: 10, application: 10 };
 }
 
-function buildChoices(correctAnswer, distractorPool, choiceCount = 4, random = Math.random) {
+function buildChoices(
+  correctAnswer,
+  distractorPool,
+  choiceCount = 4,
+  selectionRandom = Math.random,
+  orderRandom = selectionRandom
+) {
   const answers = [];
   const seen = new Set();
 
@@ -94,9 +100,9 @@ function buildChoices(correctAnswer, distractorPool, choiceCount = 4, random = M
   };
 
   add(correctAnswer);
-  shuffle(distractorPool, random).forEach(add);
+  shuffle(distractorPool, selectionRandom).forEach(add);
 
-  return shuffle(answers.slice(0, choiceCount), random).map((text, index) => ({
+  return shuffle(answers.slice(0, choiceCount), orderRandom).map((text, index) => ({
     id: `choice-${index}`,
     text,
   }));
@@ -191,6 +197,155 @@ function buildApplicationQuestions(set, count, cards, usedCardIds) {
   ];
 }
 
+function getComprehensionTopic(question) {
+  const number = Number(String(question.id || '').replace(/\D/g, ''));
+  if (number >= 1 && number <= 5) return 'clifford';
+  if (number >= 6 && number <= 14) return 'james';
+  if (number >= 15 && number <= 23) return 'descartes';
+  if (number >= 24 && number <= 35) return 'skepticism';
+  if (number === 36) return 'clifford';
+  return 'skepticism';
+}
+
+function takeVersionWindow(items, count, versionIndex) {
+  if (items.length === 0) return [];
+  const offset = versionIndex * count;
+  return Array.from({ length: Math.min(count, items.length) }, (_, index) =>
+    items[(offset + index) % items.length]
+  );
+}
+
+function buildFullBankPracticeVersion(set, version = 'A') {
+  const versionIndex = Math.max(0, TEST_VERSIONS.indexOf(version));
+  const explicit = (set.practiceQuestions || [])
+    .filter(question => !question.pending && isReadyText(question.prompt) && isReadyText(question.answer));
+  const allArgumentItems = (set.arguments || []).flatMap((argument, argumentIndex) =>
+    argument.steps
+      .map((step, stepIndex) => ({
+        argument,
+        argumentIndex,
+        step,
+        stepIndex,
+        total: argument.steps.length,
+      }))
+      .filter(item => isReadyText(item.step.text))
+  );
+
+  const selectedArgumentItems = shuffle(
+    allArgumentItems.filter(item => ((item.argumentIndex * 3) + item.stepIndex) % TEST_VERSIONS.length === versionIndex),
+    createSeededRandom(hashText(`${set.id}:${version}:arguments:order`))
+  );
+  const blankStepsByArgument = selectedArgumentItems.reduce((stepsByArgument, item) => {
+    const steps = stepsByArgument.get(item.argument.id) || [];
+    stepsByArgument.set(item.argument.id, [...steps, item.step.id]);
+    return stepsByArgument;
+  }, new Map());
+
+  const argumentQuestions = selectedArgumentItems.map(item => {
+    const authored = explicit.find(question => question.stepId === item.step.id);
+    const sameArgumentSteps = item.argument.steps
+      .map(step => step.text)
+      .filter(text => text !== item.step.text);
+    const argumentPool = authored?.distractors?.length
+      ? authored.distractors
+      : [
+          ...sameArgumentSteps,
+          ...allArgumentItems
+            .map(candidate => candidate.step.text)
+            .filter(text => text !== item.step.text && !sameArgumentSteps.includes(text)),
+        ];
+    return {
+      id: `${version}-arg-${item.argument.id}-${item.step.id}`,
+      sourceId: item.step.id,
+      section: 'argument',
+      prompt: `What is ${item.step.id}, the ${roleForStep(item.step, item.stepIndex, item.total)} of ${item.argument.shortTitle || item.argument.title}?`,
+      answer: item.step.text,
+      points: 1,
+      argument: item.argument,
+      blankStepIds: blankStepsByArgument.get(item.argument.id) || [item.step.id],
+      choices: buildChoices(
+        item.step.text,
+        argumentPool,
+        5,
+        createSeededRandom(hashText(`${set.id}:${version}:argument:${item.argument.id}:${item.step.id}`)),
+        Math.random
+      ),
+    };
+  });
+
+  const readyCards = (set.cards || []).filter(card => isReadyText(card.definition) && !card.pending);
+  const cardBank = shuffle(
+    readyCards,
+    createSeededRandom(hashText(`${set.id}:full-bank:vocabulary`))
+  );
+  const selectedCards = takeVersionWindow(cardBank, 11, versionIndex);
+  const definitionQuestions = selectedCards.map(card => {
+    const authored = explicit.find(question => question.prompt.startsWith(`${card.term} =`));
+    const distractors = authored?.distractors?.length
+      ? authored.distractors
+      : card.practiceDistractors?.length
+        ? card.practiceDistractors
+        : readyCards
+            .map(candidate => candidate.definition)
+            .filter(definition => definition !== card.definition);
+    return {
+      id: `${version}-def-${card.id}`,
+      sourceId: card.id,
+      section: 'definition',
+      prompt: `${card.term} = __________________________________________`,
+      answer: card.definition,
+      points: 2,
+      choices: buildChoices(
+        card.definition,
+        distractors,
+        5,
+        createSeededRandom(hashText(`${set.id}:${version}:definition:${card.id}`)),
+        Math.random
+      ),
+    };
+  });
+
+  const readyComprehension = (set.comprehensionQuestions || [])
+    .filter(question => isReadyText(question.prompt) && isReadyText(question.answer) && !question.pending);
+  const comprehensionBank = shuffle(
+    readyComprehension,
+    createSeededRandom(hashText(`${set.id}:full-bank:comprehension`))
+  );
+  const selectedComprehension = takeVersionWindow(comprehensionBank, 11, versionIndex);
+  const applicationQuestions = selectedComprehension.map(question => {
+    const authored = explicit.find(candidate => candidate.prompt === question.prompt);
+    const sameTopicAnswers = readyComprehension
+      .filter(candidate => candidate.id !== question.id && getComprehensionTopic(candidate) === getComprehensionTopic(question))
+      .map(candidate => candidate.answer);
+    const fallbackAnswers = readyComprehension
+      .filter(candidate => candidate.id !== question.id && !sameTopicAnswers.includes(candidate.answer))
+      .map(candidate => candidate.answer);
+    return {
+      id: `${version}-app-${question.id}`,
+      sourceId: question.id,
+      section: 'application',
+      prompt: question.prompt,
+      answer: question.answer,
+      points: 2,
+      choices: buildChoices(
+        question.answer,
+        authored?.distractors?.length ? authored.distractors : [...sameTopicAnswers, ...fallbackAnswers],
+        5,
+        createSeededRandom(hashText(`${set.id}:${version}:application:${question.id}`)),
+        Math.random
+      ),
+    };
+  });
+
+  return {
+    blueprint: {
+      label: `${set.practiceBlueprintLabel || 'Study-guide question set'} · Version ${version} full-bank mix`,
+    },
+    questions: [...argumentQuestions, ...definitionQuestions, ...applicationQuestions]
+      .map((question, index) => ({ ...question, number: index + 1 })),
+  };
+}
+
 function buildExplicitPracticeQuestions(set, version = 'A') {
   const explicit = (set.practiceQuestions || [])
     .filter(question => !question.pending && isReadyText(question.prompt) && isReadyText(question.answer));
@@ -249,6 +404,9 @@ function buildExplicitPracticeQuestions(set, version = 'A') {
 }
 
 function buildPracticeQuestions(set, version = 'A') {
+  if (set.practiceVersionMode === 'full-bank') {
+    return buildFullBankPracticeVersion(set, version);
+  }
   const explicitBuild = buildExplicitPracticeQuestions(set, version);
   if (explicitBuild) return explicitBuild;
 
@@ -444,7 +602,8 @@ export default function PracticeTest({ setId, onBack }) {
                 Select a test version
               </h2>
               <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">
-                Every version has the same 28 questions and 50-point coverage in a different fixed order.
+                Each 50-point version uses a different fixed mix. Together, A–D cover every ready argument step,
+                vocabulary term, and comprehension question.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -651,6 +810,9 @@ export default function PracticeTest({ setId, onBack }) {
             <section
               key={question.id}
               id={`question-${question.number}`}
+              data-section={question.section}
+              data-source-id={question.sourceId || question.id}
+              data-points={question.points}
               className="scroll-mt-5 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 sm:p-7"
             >
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

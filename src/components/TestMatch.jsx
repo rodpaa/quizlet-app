@@ -20,18 +20,25 @@ const ROUND_SIZE = 6;
 export default function TestMatch({ setId, onBack, onHome, initialCards, onComplete }) {
   const { getSet } = useSets();
   const set = getSet(setId);
-  const allCards = initialCards || set.cards;
   const chunkedMode = !initialCards;
+  const allCards = useMemo(() => {
+    if (initialCards || !set.matchOrder?.length) return initialCards || set.cards;
+    const order = new Map(set.matchOrder.map((cardId, index) => [cardId, index]));
+    return [...set.cards].sort((a, b) =>
+      (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+    );
+  }, [initialCards, set.cards, set.matchOrder]);
+  const roundSize = chunkedMode ? set.matchRoundSize || ROUND_SIZE : allCards.length;
   const [roundIndex, setRoundIndex] = useState(0);
   const [roundSeed, setRoundSeed] = useState(0);
-  const totalRounds = chunkedMode ? Math.ceil(allCards.length / ROUND_SIZE) : 1;
+  const totalRounds = chunkedMode ? Math.ceil(allCards.length / roundSize) : 1;
   const gameCards = useMemo(() => {
     if (!chunkedMode) return allCards;
-    const start = roundIndex * ROUND_SIZE;
-    return allCards.slice(start, start + ROUND_SIZE);
-  }, [allCards, chunkedMode, roundIndex]);
-  const roundStart = chunkedMode ? roundIndex * ROUND_SIZE + 1 : 1;
-  const roundEnd = chunkedMode ? Math.min((roundIndex + 1) * ROUND_SIZE, allCards.length) : gameCards.length;
+    const start = roundIndex * roundSize;
+    return allCards.slice(start, start + roundSize);
+  }, [allCards, chunkedMode, roundIndex, roundSize]);
+  const roundStart = chunkedMode ? roundIndex * roundSize + 1 : 1;
+  const roundEnd = chunkedMode ? Math.min((roundIndex + 1) * roundSize, allCards.length) : gameCards.length;
   const hasMoreRounds = chunkedMode && roundIndex < totalRounds - 1;
 
   const tiles = useMemo(() => buildTiles(gameCards, roundSeed), [gameCards, roundSeed]);

@@ -4,9 +4,25 @@ import { playCorrect, playWrong, playCelebration } from '../utils/sound';
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
 
-function buildQuestions(cards, allCards) {
+function getAuthoredDistractors(card, set) {
+  if (card.practiceDistractors?.length) return card.practiceDistractors;
+  const definitionQuestion = (set.practiceQuestions || []).find(question =>
+    question.section === 'definition' && question.prompt.startsWith(`${card.term} =`)
+  );
+  return definitionQuestion?.distractors || [];
+}
+
+function buildQuestions(cards, allCards, set, useAuthoredDistractors) {
   const pool = allCards.length >= 4 ? allCards : cards;
   return shuffle(cards).map(card => {
+    const authored = useAuthoredDistractors ? getAuthoredDistractors(card, set) : [];
+    if (authored.length >= 3) {
+      const wrong = shuffle(authored).slice(0, 3).map((definition, index) => ({
+        id: `distractor-${card.id}-${index}`,
+        definition,
+      }));
+      return { card, options: shuffle([card, ...wrong]) };
+    }
     const wrong = shuffle(pool.filter(c => c.id !== card.id)).slice(0, 3);
     const options = shuffle([card, ...wrong]);
     return { card, options };
@@ -25,7 +41,8 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
   const set = getSet(setId);
   const pool = set.cards; // full set for distractors
   const cards = initialCards || set.cards;
-  const [questions] = useState(() => buildQuestions(cards, pool));
+  const useAuthoredDistractors = !onComplete && set.practiceVersionMode === 'full-bank';
+  const [questions] = useState(() => buildQuestions(cards, pool, set, useAuthoredDistractors));
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [results, setResults] = useState([]);
@@ -285,7 +302,7 @@ export default function TestMCQ({ setId, onBack, initialCards, onComplete }) {
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 mb-6 shadow-sm animate-slide-up">
         <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3">
-          {isRetry ? 'Wrong answer — try again:' : 'Choose the correct author:'}
+          {isRetry ? 'Wrong answer — try again:' : 'Choose the correct definition:'}
         </div>
         <div className="text-2xl font-black text-gray-900 dark:text-white">{current.card.term}</div>
       </div>
