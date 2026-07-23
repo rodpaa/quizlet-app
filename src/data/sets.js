@@ -543,7 +543,7 @@ export const flashcardSets = [
     subject: 'Philosophy',
     color: '#4f46e5',
     emoji: 'Φ',
-    testContext: "Built from Clifford's Ethics of Belief, James's Will to Believe, Descartes' Meditations, and the supplied Test 4 study guide. The guide flags the exact wording of GO1 premise 1.2 and two inferred comprehension answers as needing confirmation.",
+    testContext: "Built from Clifford's Ethics of Belief, James's Will to Believe, Descartes' Meditations, and the supplied Test 4 study guide. Two inferred comprehension answers remain marked as needing confirmation.",
     focusAreas: [
       "Clifford's Rule says belief on insufficient evidence is morally wrong; James replies that genuine options can permissibly be settled by passional factors.",
       "For Descartes, separate the Dream Hypothesis from the Evil Demon Hypothesis: DH targets sensory beliefs about the immediate environment, while EDH extends doubt to general material-world and a priori beliefs.",
@@ -552,7 +552,7 @@ export const flashcardSets = [
     pendingTerms: [
       {
         term: 'Items to confirm against lecture notes',
-        note: 'The supplied guide leaves premise 1.2 of the Defense of GO1 blank. Its answers about Descartes\' stable foundation and the flawed speech about skepticism are reasonable inferences, but not explicitly stated in the source notes.',
+        note: 'The answers about Descartes\' stable foundation and the flawed speech about skepticism are reasonable inferences, but not explicitly stated in the source notes.',
       },
     ],
     cards: [
@@ -647,13 +647,12 @@ export const flashcardSets = [
       },
       {
         id: 'go1-defense',
-        title: 'Defense of GO1',
+        title: 'Defense of GO1: The Live Nature of God',
         shortTitle: 'Defense of GO1',
-        builder: false,
         source: 'Class notes (James)',
         steps: [
           { id: '1.1', text: 'Every genuine option is a live option.' },
-          { id: '1.2', text: 'Needs confirmation - this premise was left blank in the class notes; it connects liveness to lacking sufficient evidence.' },
+          { id: '1.2', text: 'No one facing a live option has sufficient evidence.' },
           { id: '1.3', text: 'Therefore, no one facing a genuine option has sufficient evidence upon which to believe.' },
         ],
       },
