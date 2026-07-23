@@ -1,9 +1,10 @@
 import { ArrowLeft, BookOpenCheck, CheckCircle2, RotateCcw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSets } from '../context/SetsContext';
-import { playCelebration, playCorrect, playWrong } from '../utils/sound';
+import { playCelebration, playWrong } from '../utils/sound';
 
 const optionLabels = ['A', 'B', 'C', 'D', 'E'];
+const TEST_VERSIONS = ['A', 'B', 'C', 'D'];
 
 const SECTION_META = {
   studyGuide: {
@@ -38,8 +39,31 @@ const SECTION_META = {
 
 const SECTION_ORDER = ['studyGuide', 'argument', 'definition', 'application'];
 
-function shuffle(items) {
-  return [...items].sort(() => Math.random() - 0.5);
+function shuffle(items, random = Math.random) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function hashText(text) {
+  return [...String(text)].reduce(
+    (hash, character) => Math.imul(hash ^ character.charCodeAt(0), 16777619),
+    2166136261
+  ) >>> 0;
+}
+
+function createSeededRandom(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 function normalizeChoice(text) {
@@ -57,7 +81,7 @@ function getBlueprint(set) {
     : { label: 'Test 1 shape', argument: 10, definition: 10, application: 10 };
 }
 
-function buildChoices(correctAnswer, distractorPool, choiceCount = 4) {
+function buildChoices(correctAnswer, distractorPool, choiceCount = 4, random = Math.random) {
   const answers = [];
   const seen = new Set();
 
@@ -70,9 +94,9 @@ function buildChoices(correctAnswer, distractorPool, choiceCount = 4) {
   };
 
   add(correctAnswer);
-  shuffle(distractorPool).forEach(add);
+  shuffle(distractorPool, random).forEach(add);
 
-  return shuffle(answers.slice(0, choiceCount)).map((text, index) => ({
+  return shuffle(answers.slice(0, choiceCount), random).map((text, index) => ({
     id: `choice-${index}`,
     text,
   }));
@@ -167,41 +191,65 @@ function buildApplicationQuestions(set, count, cards, usedCardIds) {
   ];
 }
 
-function buildExplicitPracticeQuestions(set) {
+function buildExplicitPracticeQuestions(set, version = 'A') {
   const explicit = (set.practiceQuestions || [])
     .filter(question => !question.pending && isReadyText(question.prompt) && isReadyText(question.answer));
 
   if (explicit.length === 0) return null;
 
   const explicitAnswers = explicit.map(question => question.answer);
+  const testedStepsByArgument = explicit.reduce((stepsByArgument, question) => {
+    if (!question.argumentId || !question.stepId) return stepsByArgument;
+    const testedSteps = stepsByArgument.get(question.argumentId) || [];
+    stepsByArgument.set(question.argumentId, [...testedSteps, question.stepId]);
+    return stepsByArgument;
+  }, new Map());
   const cardAnswers = (set.cards || [])
     .map(card => card.definition)
     .filter(isReadyText);
 
+  const preparedQuestions = explicit
+    .map((question, index) => ({
+      id: question.id || `guide-${index + 1}`,
+      section: question.section || 'studyGuide',
+      prompt: question.prompt,
+      answer: question.answer,
+      points: question.points || 2,
+      argument: question.argumentId
+        ? (set.arguments || []).find(argument => argument.id === question.argumentId)
+        : null,
+      blankStepIds: question.argumentId
+        ? testedStepsByArgument.get(question.argumentId) || []
+        : [],
+      choices: buildChoices(
+        question.answer,
+        question.distractors?.length
+          ? question.distractors
+          : [...explicitAnswers.filter(answer => answer !== question.answer), ...cardAnswers],
+        question.distractors?.length ? 5 : 4,
+        createSeededRandom(hashText(`${set.id}:${version}:${question.id || index}`))
+      ),
+    }))
+    .filter(question => question.choices.length > 1);
+
+  const versionedQuestions = SECTION_ORDER.flatMap(section => {
+    const sectionQuestions = preparedQuestions.filter(question => question.section === section);
+    if (version === 'A') return sectionQuestions;
+    return shuffle(
+      sectionQuestions,
+      createSeededRandom(hashText(`${set.id}:${version}:${section}:order`))
+    );
+  });
+
   return {
     blueprint: { label: set.practiceBlueprintLabel || 'Study-guide question set' },
-    questions: explicit
-      .map((question, index) => ({
-        id: question.id || `guide-${index + 1}`,
-        section: question.section || 'studyGuide',
-        prompt: question.prompt,
-        answer: question.answer,
-        points: question.points || 2,
-        choices: buildChoices(
-          question.answer,
-          question.distractors?.length
-            ? question.distractors
-            : [...explicitAnswers.filter(answer => answer !== question.answer), ...cardAnswers],
-          question.distractors?.length ? 5 : 4
-        ),
-      }))
-      .filter(question => question.choices.length > 1)
+    questions: versionedQuestions
       .map((question, index) => ({ ...question, number: index + 1 })),
   };
 }
 
-function buildPracticeQuestions(set) {
-  const explicitBuild = buildExplicitPracticeQuestions(set);
+function buildPracticeQuestions(set, version = 'A') {
+  const explicitBuild = buildExplicitPracticeQuestions(set, version);
   if (explicitBuild) return explicitBuild;
 
   const blueprint = getBlueprint(set);
@@ -235,22 +283,50 @@ function pct(score, total) {
   return total > 0 ? Math.round((score / total) * 100) : 0;
 }
 
+function ArgumentQuestionContext({ question }) {
+  if (!question.argument) return null;
+
+  return (
+    <section className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-900/50">
+      <h3 className="mb-4 text-center text-base font-black text-gray-900 dark:text-white">
+        {question.argument.title}
+      </h3>
+      <div className="space-y-3 text-sm font-semibold leading-relaxed text-gray-700 dark:text-gray-200 sm:text-base">
+        {question.argument.steps.map(step => (
+          <p key={step.id} className="flex items-baseline gap-2">
+            <span className="shrink-0 font-black">({step.id})</span>
+            {question.blankStepIds.includes(step.id)
+              ? (
+                <span className="h-5 min-w-0 flex-1 border-b-2 border-gray-400 dark:border-gray-500">
+                  <span className="sr-only">{step.id} omitted</span>
+                </span>
+              )
+              : <span>{step.text}</span>}
+          </p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function PracticeTest({ setId, onBack }) {
   const { getSet } = useSets();
   const set = getSet(setId);
   const [manualBuild, setManualBuild] = useState(null);
+  const [selectedVersion, setSelectedVersion] = useState('A');
   const [started, setStarted] = useState(false);
-  const [index, setIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [answers, setAnswers] = useState({});
   const [results, setResults] = useState([]);
   const [done, setDone] = useState(false);
   const [courseLabel, testLabel] = (set?.title || 'Study set').split(':').map(part => part.trim());
 
   const baseBuild = useMemo(
-    () => set ? buildPracticeQuestions(set) : { blueprint: { label: 'Practice test' }, questions: [] },
-    [set]
+    () => set ? buildPracticeQuestions(set, selectedVersion) : { blueprint: { label: 'Practice test' }, questions: [] },
+    [set, selectedVersion]
   );
-  const { blueprint, questions } = manualBuild?.setId === setId ? manualBuild : baseBuild;
+  const { blueprint, questions } = manualBuild?.setId === setId && manualBuild?.version === selectedVersion
+    ? manualBuild
+    : baseBuild;
   const sectionSummary = useMemo(() => summarizeSections(questions), [questions]);
 
   if (!set) return null;
@@ -258,45 +334,54 @@ export default function PracticeTest({ setId, onBack }) {
   const totalPoints = questions.reduce((sum, question) => sum + question.points, 0);
   const earnedPoints = results.reduce((sum, result) => sum + result.earnedPoints, 0);
   const scorePct = pct(earnedPoints, totalPoints);
-  const current = questions[index];
-  const answered = selectedAnswer !== null;
-  const progress = questions.length > 0 ? ((index + (answered ? 1 : 0)) / questions.length) * 100 : 0;
+  const answeredCount = questions.filter(question => answers[question.id] !== undefined).length;
+  const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+  const supportsVersions = Boolean(set.practiceQuestions?.length);
 
   const resetAttempt = (startImmediately = false) => {
-    setManualBuild({ setId, ...buildPracticeQuestions(set) });
+    setManualBuild({ setId, version: selectedVersion, ...buildPracticeQuestions(set, selectedVersion) });
     setStarted(startImmediately);
-    setIndex(0);
-    setSelectedAnswer(null);
+    setAnswers({});
     setResults([]);
     setDone(false);
   };
 
-  const chooseAnswer = (answer) => {
-    if (selectedAnswer !== null || !current) return;
-    const correct = answer === current.answer;
-    setSelectedAnswer(answer);
-    setResults(currentResults => [
-      ...currentResults,
-      {
-        question: current,
-        selectedAnswer: answer,
-        correct,
-        earnedPoints: correct ? current.points : 0,
-      },
-    ]);
-    if (correct) playCorrect();
-    else playWrong();
+  const chooseVersion = (version) => {
+    setSelectedVersion(version);
+    setManualBuild(null);
+    setAnswers({});
+    setResults([]);
+    setDone(false);
   };
 
-  const nextQuestion = () => {
-    if (index + 1 >= questions.length) {
-      playCelebration();
-      setDone(true);
-      return;
-    }
+  const returnToVersionPicker = () => {
+    setStarted(false);
+    setAnswers({});
+    setResults([]);
+    setDone(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
-    setIndex(currentIndex => currentIndex + 1);
-    setSelectedAnswer(null);
+  const chooseAnswer = (questionId, answer) => {
+    setAnswers(currentAnswers => ({ ...currentAnswers, [questionId]: answer }));
+  };
+
+  const submitTest = () => {
+    const gradedResults = questions.map(question => {
+      const selectedAnswer = answers[question.id];
+      const correct = selectedAnswer === question.answer;
+      return {
+        question,
+        selectedAnswer,
+        correct,
+        earnedPoints: correct ? question.points : 0,
+      };
+    });
+    setResults(gradedResults);
+    if (gradedResults.every(result => result.correct)) playCelebration();
+    else playWrong();
+    setDone(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (questions.length === 0) {
@@ -342,14 +427,57 @@ export default function PracticeTest({ setId, onBack }) {
               </p>
             </div>
             <button
-              onClick={() => setStarted(true)}
+              onClick={() => resetAttempt(true)}
               className="h-11 px-5 self-start md:self-auto rounded-lg bg-qteal hover:bg-cyan-700 text-white font-black transition-colors flex items-center gap-2"
             >
               <BookOpenCheck size={17} />
-              Start test
+              Start {supportsVersions ? `Version ${selectedVersion}` : 'test'}
             </button>
           </div>
         </header>
+
+        {supportsVersions && (
+          <section className="mb-7" aria-labelledby="version-picker-title">
+            <div className="mb-4">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-qteal">Choose your exam booklet</div>
+              <h2 id="version-picker-title" className="mt-1 text-2xl font-black text-gray-900 dark:text-white">
+                Select a test version
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">
+                Every version has the same 28 questions and 50-point coverage in a different fixed order.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {TEST_VERSIONS.map(version => {
+                const isSelected = selectedVersion === version;
+                return (
+                  <button
+                    key={version}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => chooseVersion(version)}
+                    className={`group relative overflow-hidden rounded-lg border-2 p-4 text-left transition-all
+                      ${isSelected
+                        ? 'border-qteal bg-gray-900 text-white shadow-lg dark:bg-white dark:text-gray-900'
+                        : 'border-gray-200 bg-white text-gray-900 hover:-translate-y-0.5 hover:border-qteal dark:border-gray-700 dark:bg-gray-800 dark:text-white'}
+                    `}
+                  >
+                    <span className={`absolute right-3 top-2 text-5xl font-black leading-none ${isSelected ? 'opacity-15' : 'text-gray-100 dark:text-gray-700'}`}>
+                      {version}
+                    </span>
+                    <span className={`relative text-[10px] font-black uppercase tracking-[0.18em] ${isSelected ? 'text-cyan-200 dark:text-cyan-700' : 'text-gray-400'}`}>
+                      Test version
+                    </span>
+                    <span className="relative mt-3 block text-3xl font-black">{version}</span>
+                    <span className={`relative mt-2 block text-xs font-bold ${isSelected ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {isSelected ? 'Selected' : 'Choose booklet'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <div className="grid md:grid-cols-3 gap-3 mb-7">
           {sectionSummary.map(({ section, count, points }) => {
@@ -387,7 +515,9 @@ export default function PracticeTest({ setId, onBack }) {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-qteal text-white">
             <CheckCircle2 size={34} />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-2">Practice test complete</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-2">
+            Practice test {supportsVersions ? `Version ${selectedVersion} ` : ''}complete
+          </h1>
           <p className="text-gray-500 dark:text-gray-400 font-semibold">
             {earnedPoints}/{totalPoints} points · {scorePct}%
           </p>
@@ -422,7 +552,7 @@ export default function PracticeTest({ setId, onBack }) {
                   <tr key={result.question.id} className="align-top">
                     <td className="px-4 py-3 font-black text-gray-500 dark:text-gray-400">{result.question.number}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{result.question.prompt}</td>
-                    <td className={`px-4 py-3 font-semibold ${result.correct ? 'text-gray-700 dark:text-gray-200' : 'text-qred'}`}>{result.selectedAnswer}</td>
+                    <td className={`px-4 py-3 font-semibold ${result.correct ? 'text-gray-700 dark:text-gray-200' : 'text-qred'}`}>{result.selectedAnswer || 'No answer'}</td>
                     <td className="px-4 py-3 font-semibold text-qgreen">{result.question.answer}</td>
                     <td className={`px-4 py-3 font-black ${result.correct ? 'text-qgreen' : 'text-qred'}`}>
                       {result.correct ? 'Correct' : 'Missed'}
@@ -448,7 +578,7 @@ export default function PracticeTest({ setId, onBack }) {
                   <div className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div>
                       <div className="font-black text-gray-400 dark:text-gray-500 uppercase text-xs">Your answer</div>
-                      <p className="font-semibold text-qred mt-1">{result.selectedAnswer}</p>
+                      <p className="font-semibold text-qred mt-1">{result.selectedAnswer || 'No answer'}</p>
                     </div>
                     <div>
                       <div className="font-black text-gray-400 dark:text-gray-500 uppercase text-xs">Correct answer</div>
@@ -467,8 +597,16 @@ export default function PracticeTest({ setId, onBack }) {
             className="h-12 px-5 rounded-lg bg-qteal hover:bg-cyan-700 text-white font-black transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw size={17} />
-            Retake practice test
+            Retake {supportsVersions ? `Version ${selectedVersion}` : 'practice test'}
           </button>
+          {supportsVersions && (
+            <button
+              onClick={returnToVersionPicker}
+              className="h-12 px-5 rounded-lg border border-qteal bg-white dark:bg-gray-800 text-qteal font-black hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-colors"
+            >
+              Choose another version
+            </button>
+          )}
           <button
             onClick={onBack}
             className="h-12 px-5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-gray-400 transition-colors"
@@ -480,92 +618,106 @@ export default function PracticeTest({ setId, onBack }) {
     );
   }
 
-  const meta = SECTION_META[current.section] || SECTION_META.application;
-
   return (
-    <main className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
+    <main className="max-w-4xl mx-auto px-4 py-6 sm:py-10">
       <div className="flex items-center justify-between gap-4 mb-6">
         <button
           onClick={onBack}
           className="flex items-center gap-2 text-sm font-black text-gray-500 dark:text-gray-400 hover:text-qblue transition-colors"
         >
           <ArrowLeft size={16} />
-          Practice test
+          Practice test{supportsVersions ? ` · Version ${selectedVersion}` : ''}
         </button>
         <span className="text-sm font-black text-gray-500 dark:text-gray-400">
-          {index + 1} / {questions.length}
+          {answeredCount} / {questions.length} answered
         </span>
       </div>
 
-      <div className="progress-bar mb-7">
+      <div className="progress-bar mb-5">
         <div className="progress-fill" style={{ width: `${progress}%` }} />
       </div>
 
-      <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 sm:p-7 animate-slide-up">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-          <div className={`inline-flex self-start rounded-md border ${meta.border} ${meta.bg} px-3 py-1.5 text-xs font-black ${meta.color}`}>
-            {meta.label}
-          </div>
-          <div className="text-sm font-black text-gray-500 dark:text-gray-400">{current.points} point{current.points !== 1 ? 's' : ''}</div>
+      <p className="mb-7 text-sm font-semibold text-gray-500 dark:text-gray-400">
+        Answer in any order. You can skip questions, return to them, and change answers before submitting.
+        Answers are checked only at the end.
+      </p>
+
+      <div className="space-y-6">
+        {questions.map(question => {
+          const meta = SECTION_META[question.section] || SECTION_META.application;
+          const selectedAnswer = answers[question.id];
+
+          return (
+            <section
+              key={question.id}
+              id={`question-${question.number}`}
+              className="scroll-mt-5 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 sm:p-7"
+            >
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 min-w-9 items-center justify-center rounded-md bg-gray-900 px-2 text-sm font-black text-white dark:bg-white dark:text-gray-900">
+                    {question.number}
+                  </span>
+                  <div className={`inline-flex rounded-md border ${meta.border} ${meta.bg} px-3 py-1.5 text-xs font-black ${meta.color}`}>
+                    {meta.label}
+                  </div>
+                </div>
+                <div className="text-sm font-black text-gray-500 dark:text-gray-400">
+                  {question.points} point{question.points !== 1 ? 's' : ''} · Multiple choice
+                </div>
+              </div>
+
+              <h2 className="mb-6 text-xl font-black leading-tight text-gray-900 dark:text-white sm:text-2xl">
+                {question.prompt}
+              </h2>
+
+              <ArgumentQuestionContext question={question} />
+
+              <fieldset className="space-y-3">
+                <legend className="sr-only">Answer choices for question {question.number}</legend>
+                {question.choices.map((choice, choiceIndex) => {
+                  const isSelected = selectedAnswer === choice.text;
+                  return (
+                    <label
+                      key={`${question.id}-${choice.id}`}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 text-left transition-all
+                        ${isSelected
+                          ? 'border-qteal bg-cyan-50 dark:bg-cyan-900/20'
+                          : 'border-gray-200 bg-white hover:border-qteal dark:border-gray-600 dark:bg-gray-900'}
+                      `}
+                    >
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={choice.text}
+                        checked={isSelected}
+                        onChange={() => chooseAnswer(question.id, choice.text)}
+                        className="mt-1 h-4 w-4 shrink-0 accent-qteal"
+                      />
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-xs font-black text-gray-500 dark:bg-gray-700 dark:text-gray-300">
+                        {optionLabels[choiceIndex]}
+                      </span>
+                      <span className="font-semibold leading-relaxed text-gray-900 dark:text-white">{choice.text}</span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+            </section>
+          );
+        })}
+      </div>
+
+      <div className="sticky bottom-4 mt-7 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-800/95 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex justify-between gap-5 px-1 text-sm font-black sm:justify-start">
+          <span className="text-qteal">{answeredCount} answered</span>
+          <span className="text-gray-500 dark:text-gray-400">{questions.length - answeredCount} unanswered</span>
         </div>
-
-        <h1 className="text-2xl sm:text-3xl font-black leading-tight text-gray-900 dark:text-white mb-6">
-          {current.prompt}
-        </h1>
-
-        <div className="space-y-3">
-          {current.choices.map((choice, choiceIndex) => {
-            const isCorrect = answered && choice.text === current.answer;
-            const isWrong = answered && choice.text === selectedAnswer && choice.text !== current.answer;
-            const isDimmed = answered && !isCorrect && !isWrong;
-            return (
-              <button
-                key={`${current.id}-${choice.id}`}
-                onClick={() => chooseAnswer(choice.text)}
-                className={`w-full rounded-lg border-2 p-4 text-left transition-all flex items-start gap-3
-                  ${!answered ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-600 hover:border-qteal hover:scale-[1.01]' : ''}
-                  ${isCorrect ? 'bg-green-50 dark:bg-green-900/20 border-qgreen' : ''}
-                  ${isWrong ? 'bg-red-50 dark:bg-red-900/20 border-qred animate-shake' : ''}
-                  ${isDimmed ? 'bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 opacity-50' : ''}
-                `}
-              >
-                <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-xs font-black
-                  ${isCorrect ? 'bg-qgreen text-white' : isWrong ? 'bg-qred text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'}
-                `}>
-                  {optionLabels[choiceIndex]}
-                </span>
-                <span className="font-semibold leading-relaxed text-gray-900 dark:text-white">{choice.text}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {answered && (
-          <div className={`mt-5 rounded-lg border p-4 ${selectedAnswer === current.answer ? 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20'}`}>
-            <div className={`font-black ${selectedAnswer === current.answer ? 'text-qgreen' : 'text-qred'}`}>
-              {selectedAnswer === current.answer ? 'Correct' : 'Missed'}
-            </div>
-            {selectedAnswer !== current.answer && (
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-1">
-                Correct answer: {current.answer}
-              </p>
-            )}
-          </div>
-        )}
-      </section>
-
-      {answered && (
         <button
-          onClick={nextQuestion}
-          className="mt-5 w-full h-12 rounded-lg bg-qteal hover:bg-cyan-700 text-white font-black transition-colors"
+          onClick={submitTest}
+          className="h-11 w-full rounded-lg bg-qteal px-5 font-black text-white transition-colors hover:bg-cyan-700 sm:w-auto"
         >
-          {index + 1 >= questions.length ? 'View score' : 'Next question'}
+          Submit test and check answers
         </button>
-      )}
-
-      <div className="flex justify-between mt-5 px-1 text-sm font-black">
-        <span className="text-qgreen">{earnedPoints} points earned</span>
-        <span className="text-gray-500 dark:text-gray-400">{totalPoints} possible</span>
       </div>
     </main>
   );
