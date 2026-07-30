@@ -1,3 +1,5 @@
+import { phi2010Test5 } from './phi2010Test5';
+
 export const flashcardSets = [
   // AP Spanish Literature flashcard set
   {
@@ -753,6 +755,8 @@ export const flashcardSets = [
       { id: 't4-q28', section: 'application', points: 2, prompt: "What is Descartes' Cogito argument, and why does he think it survives the doubts raised in the First Meditation?", answer: 'I am thinking now; if I am thinking now, then I exist now; therefore, I exist now. It survives because believing or doubting that one is thinking is itself a case of thinking.', distractors: ['I exist now; if I exist now, then I am thinking now; therefore, I am thinking now. It survives because existence guarantees every thought is true.', 'I have a body now; if I have a body, then the external world exists; therefore, the external world exists. It survives because dreams contain bodies.', 'I am thinking now; if I am thinking now, then I cannot be deceived; therefore, none of my beliefs is false. It survives because an evil demon cannot affect thought.', 'I am doubting now; if I am doubting now, then my sensory beliefs are true; therefore, I know the material world exists. It survives because doubt supplies sufficient evidence.'] },
     ],
   },
+  // PHI 2010 Test 5 flashcard set
+  phi2010Test5,
   // Spanish Basics flashcard set
   {
     id: 'spanish-basics',
