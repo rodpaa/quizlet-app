@@ -21,7 +21,7 @@ const cards = [...vocabSection.matchAll(
     id: Number(match[1]),
     term: match[2].trim(),
     definition,
-    ...(definition.includes('NEEDS CONFIRMATION') ? { pending: true } : {}),
+    ...(/NEEDS CONFIRMATION|MISSING FROM THE SUPPLIED/i.test(definition) ? { pending: true } : {}),
   };
 });
 
@@ -65,11 +65,11 @@ export const phi2010Test5 = {
   subject: 'Philosophy',
   color: '#7c3aed',
   emoji: 'Φ',
-  testContext: 'Built from the supplied Test 5 study guide covering freedom of action, free will, determinism, responsibility, punishment, and meaning in life.',
+  testContext: 'Strictly based on the supplied readings, lecture notes, and draft study guide: 20 vocabulary terms, 42 comprehension prompts, and 2 assigned argument reconstructions.',
   focusAreas: [
     'Distinguish freedom of action from responsibility-making free will, and compare Frankfurt’s Higher-Order Desire Theory with Wolf’s Sane Deep Self View.',
     'Compare compatibilism, libertarian incompatibilism, and hard incompatibilism; know AO, the Consequence Argument, and Kane’s self-forming actions.',
-    'Contrast retributive punishment with Pereboom’s preventive contagion model, then compare Taylor’s subjective account of meaning with Wolf’s projects-of-worth view.',
+    'Contrast retributive punishment with Pereboom’s preventive contagion model, then explain Taylor’s account of meaning and the Sisyphus-on-Drugs case.',
   ],
   pendingTerms: [
     {
@@ -79,6 +79,10 @@ export const phi2010Test5 = {
     {
       term: 'Class argument for pessimism about life’s meaning',
       note: 'The exact premises and classroom formulation were not included in the supplied notes. Taylor’s discussion is retained as context, not substituted as confirmed course wording.',
+    },
+    {
+      term: 'Simple Desire Theory',
+      note: 'The supplied notes do not give a precise definition. Only the study guide comparison indicates how it classifies the Unwilling Addict.',
     },
   ],
   cards,
