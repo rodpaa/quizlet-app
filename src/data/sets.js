@@ -1,5 +1,3 @@
-import { phi2010Test5 } from './phi2010Test5';
-
 export const flashcardSets = [
   // AP Spanish Literature flashcard set
   {
@@ -756,70 +754,391 @@ export const flashcardSets = [
     ],
   },
   // PHI 2010 Test 5 flashcard set
-  phi2010Test5,
-  // Spanish Basics flashcard set
   {
-    id: 'spanish-basics',
-    title: 'Spanish Basics',
-    description: 'Essential Spanish vocabulary for beginners',
-    subject: 'Language',
-    color: '#4257b2',
-    emoji: '🇪🇸',
-    cards: [
-      { id: 1, term: 'Hello', definition: 'Hola' },
-      { id: 2, term: 'Goodbye', definition: 'Adiós' },
-      { id: 3, term: 'Please', definition: 'Por favor' },
-      { id: 4, term: 'Thank you', definition: 'Gracias' },
-      { id: 5, term: 'Good morning', definition: 'Buenos días' },
-      { id: 6, term: 'Good night', definition: 'Buenas noches' },
-      { id: 7, term: 'How are you?', definition: '¿Cómo estás?' },
-      { id: 8, term: 'My name is...', definition: 'Me llamo...' },
-      { id: 9, term: 'I don\'t understand', definition: 'No entiendo' },
-      { id: 10, term: 'Where is the bathroom?', definition: '¿Dónde está el baño?' },
+    "id": "phi-2010-test-5",
+    "title": "PHI 2010: Test 5",
+    "description": "Freedom, moral responsibility, punishment, and the meaning of life",
+    "subject": "Philosophy",
+    "color": "#7c3aed",
+    "emoji": "Φ",
+    "testContext": "Based on the supplied readings, lecture notes, and draft study guide, with user-approved reconstructions for source gaps: 20 vocabulary terms, 42 comprehension prompts, and 2 assigned argument reconstructions.",
+    "focusAreas": [
+      "Distinguish freedom of action from responsibility-making free will, and compare Frankfurt’s Higher-Order Desire Theory with Wolf’s Sane Deep Self View.",
+      "Compare compatibilism, libertarian incompatibilism, and hard incompatibilism; know AO, the Consequence Argument, and Kane’s self-forming actions.",
+      "Contrast retributive punishment with Pereboom’s preventive contagion model, then explain Taylor’s account of meaning and the Sisyphus-on-Drugs case."
+    ],
+    "pendingTerms": [],
+    "cards": [
+      {
+        "id": 1,
+        "term": "Freedom of Action",
+        "definition": "The ability to act on your will without external impediment."
+      },
+      {
+        "id": 2,
+        "term": "Compatibilism",
+        "definition": "Determinism is compatible with free will."
+      },
+      {
+        "id": 3,
+        "term": "First-Order Desire",
+        "definition": "A desire to act."
+      },
+      {
+        "id": 4,
+        "term": "Second-Order Desire",
+        "definition": "A desire about a first-order desire."
+      },
+      {
+        "id": 5,
+        "term": "Second-Order Volition",
+        "definition": "A desire for a first-order desire to be your will or cause you to act."
+      },
+      {
+        "id": 6,
+        "term": "Person (Frankfurt)",
+        "definition": "Any being with second-order volitions."
+      },
+      {
+        "id": 7,
+        "term": "Wanton (Frankfurt)",
+        "definition": "A being with first-order desires but no second-order volitions."
+      },
+      {
+        "id": 8,
+        "term": "Higher-Order Desire Theory",
+        "definition": "Free will is the power to act on the desire you want to act on; equivalently, having your will controlled by your second-order volition."
+      },
+      {
+        "id": 9,
+        "term": "Sane Deep Self Theory",
+        "definition": "A person has free will when (i) the person's deep self controls the will and (ii) the person is sane."
+      },
+      {
+        "id": 10,
+        "term": "State of the World at a Time t",
+        "definition": "A complete list of (i) every object that exists at t and (ii) every property of those objects and every relation among them at t."
+      },
+      {
+        "id": 11,
+        "term": "Law of Nature",
+        "definition": "A law that determines which continuations of a state of the world are physically possible. The supplied study guide asks only for a rough account."
+      },
+      {
+        "id": 12,
+        "term": "Determinism",
+        "definition": "The state of the world at any time plus the laws of nature necessitate or guarantee a unique state of the world at the next time."
+      },
+      {
+        "id": 13,
+        "term": "Ability to Do Otherwise Condition (AO)",
+        "definition": "A person does an action A of her own free will only if she could have done otherwise than A."
+      },
+      {
+        "id": 14,
+        "term": "Untouchable Fact",
+        "definition": "A fact that no human being in history has ever had the power to change."
+      },
+      {
+        "id": 15,
+        "term": "Untouchability Principle",
+        "definition": "If it is an untouchable fact that p, and it is an untouchable fact that if p then q, then it is an untouchable fact that q."
+      },
+      {
+        "id": 16,
+        "term": "Incompatibilism",
+        "definition": "If determinism is true, then we have no free will."
+      },
+      {
+        "id": 17,
+        "term": "Libertarian Incompatibilism",
+        "definition": "If determinism is true, then we have no free will; we do have free will; therefore, determinism is false."
+      },
+      {
+        "id": 18,
+        "term": "Hard Incompatibilism",
+        "definition": "If determinism is true, then we do not have free will, and if determinism is false, then we do not have free will."
+      },
+      {
+        "id": 19,
+        "term": "Retributivist Theory of Punishment",
+        "definition": "Criminal punishment is justified because criminals deserve to be punished for their crimes."
+      },
+      {
+        "id": 20,
+        "term": "Contagion Theory of Punishment",
+        "definition": "Criminal restraint is justified because, like quarantine, it prevents the criminal from further harming society."
+      }
+    ],
+    "comprehensionQuestions": [
+      {
+        "id": "t5-cq-1",
+        "prompt": "What is freedom of action?",
+        "answer": "Freedom of action is the ability to act on your will without an external impediment."
+      },
+      {
+        "id": "t5-cq-2",
+        "prompt": "Why is freedom of action not sufficient for the free will required for moral responsibility? Give an example.",
+        "answer": "A person may act on a will produced by hypnosis, compulsion, brainwashing, mind control, or addiction. Such a person can act without an external barrier while still lacking the deeper freedom required for responsibility."
+      },
+      {
+        "id": "t5-cq-3",
+        "prompt": "What is determinism, both precisely and in ordinary language?",
+        "answer": "Precisely: the state of the world at any time plus the laws of nature necessitate or guarantee a unique state of the world at the next time. In ordinary language: once the complete state and the laws are fixed, only one physically possible continuation is available."
+      },
+      {
+        "id": "t5-cq-4",
+        "prompt": "What is the state of the world at a time? What is a law of nature, and how do these ideas formulate determinism?",
+        "answer": "A state of the world at a time is a complete list of every object that exists then, every property of those objects, and every relation among them. A law of nature determines which continuations of that state are physically possible. Determinism says that the complete state together with the laws guarantees a unique continuation."
+      },
+      {
+        "id": "t5-cq-5",
+        "prompt": "How can determinism be true without every event being necessary?",
+        "answer": "Determinism gives conditional necessity: an event is necessary given the earlier state and laws. It does not say the event had to happen no matter what; different earlier conditions could have led to something else."
+      },
+      {
+        "id": "t5-cq-6",
+        "prompt": "What is wrong with arguing that an unpredictable coin toss disproves determinism?",
+        "answer": "The argument confuses determinism with predictability. A person's ignorance of the outcome does not show that the outcome is not guaranteed by the prior state and laws."
+      },
+      {
+        "id": "t5-cq-7",
+        "prompt": "What is compatibilism, and why are Frankfurt's and Wolf's theories compatibilist?",
+        "answer": "Compatibilism says determinism is compatible with free will. Frankfurt requires the will to match a second-order volition. Wolf requires deep-self control plus sanity. Neither theory requires the action to be undetermined."
+      },
+      {
+        "id": "t5-cq-8",
+        "prompt": "What is the difference between a first-order and second-order desire? Give two examples of each.",
+        "answer": "A first-order desire is a desire to act, such as wanting to study or wanting to take a drug. A second-order desire is a desire about a first-order desire, such as wanting to want to study or wanting the desire not to take the drug to be effective."
+      },
+      {
+        "id": "t5-cq-9",
+        "prompt": "Which first-order desire counts as a person's will?",
+        "answer": "The person's will is the first-order desire that actually causes the person to act."
+      },
+      {
+        "id": "t5-cq-10",
+        "prompt": "What are Frankfurt's two types of second-order desire?",
+        "answer": "Type 1 is a desire merely to have a first-order desire, such as wanting to have the desire to study. Type 2 is a second-order volition, such as wanting the desire to study to be one's will."
+      },
+      {
+        "id": "t5-cq-11",
+        "prompt": "What is a second-order volition, and what roles does it play in personhood and free will?",
+        "answer": "It is a desire that a first-order desire be one's will. Second-order volitions mark personhood, and free will occurs when the person's effective will is controlled by the person's second-order volition."
+      },
+      {
+        "id": "t5-cq-12",
+        "prompt": "How does Frankfurt distinguish persons from wantons, and why can only persons have free will?",
+        "answer": "Persons have second-order volitions and care which desire becomes their will. Wantons have first-order desires but no second-order volitions. Because Frankfurt's freedom requires having the will one wants, persons can satisfy the theory while wantons cannot."
+      },
+      {
+        "id": "t5-cq-13",
+        "prompt": "Is Chet free if he takes a drug but wants his desire not to take it to be his will?",
+        "answer": "No. His desire to take the drug is his effective will, but his second-order volition favors the desire not to take it. He does not act on the desire he wants to act on."
+      },
+      {
+        "id": "t5-cq-14",
+        "prompt": "How should a Chet or Chad case be evaluated under Frankfurt's theory?",
+        "answer": "Identify the action, the first-order desire that caused it, and the first-order desire the agent wants to be effective. The agent is free only when the effective desire matches the second-order volition."
+      },
+      {
+        "id": "t5-cq-15",
+        "prompt": "What are the two equivalent formulations of Frankfurt's Higher-Order Desire Theory?",
+        "answer": "A person is free when the person acts on the desire the person wants to act on; equivalently, a person is free when the person's will is controlled by the person's second-order volition."
+      },
+      {
+        "id": "t5-cq-16",
+        "prompt": "How do the Simple Desire Theory and Frankfurt's theory assess the Unwilling Addict?",
+        "answer": "The Simple Desire Theory says a person acts freely when the action issues from one of the person's own desires, so it counts the Unwilling Addict as free because he takes the drug from his desire to take it. Frankfurt counts him unfree because that effective desire conflicts with his second-order volition: it is not the desire he wants to be his will."
+      },
+      {
+        "id": "t5-cq-17",
+        "prompt": "What is a Deep Self View, and why is Frankfurt's theory one?",
+        "answer": "A Deep Self View says a person has free will when the person's deep self controls the will. Frankfurt's theory treats second-order volitions as part of the deep self that governs which first-order desire the person wants as a will."
+      },
+      {
+        "id": "t5-cq-18",
+        "prompt": "What are the relevant details of Wolf's JoJo case, and why does it challenge Deep Self Views?",
+        "answer": "JoJo is the favorite son of an evil dictator and is raised to follow his father's brutal example. He rules brutally, wants to do so, and endorses that will at deeper levels. Wolf nevertheless denies that he is responsible because his upbringing leaves him unable properly to recognize the wrongness. The case shows that deep-self endorsement alone is insufficient."
+      },
+      {
+        "id": "t5-cq-19",
+        "prompt": "How does Wolf amend the Deep Self View?",
+        "answer": "She adds a sanity condition: the deep self must control the will and the agent must be sane. This excludes JoJo because his endorsing deep self does not adequately understand right and wrong."
+      },
+      {
+        "id": "t5-cq-20",
+        "prompt": "What are Wolf's two conditions for sanity, and which does JoJo fail?",
+        "answer": "A sane person knows what the person is doing and knows whether it is right or wrong. JoJo knows what he is doing but fails the right-or-wrong condition."
+      },
+      {
+        "id": "t5-cq-21",
+        "prompt": "What is incompatibilism, and how do its two main forms differ?",
+        "answer": "Incompatibilism says determinism rules out free will. Libertarians say free will exists and determinism is therefore false. Hard incompatibilists say free will is absent whether determinism is true or false."
+      },
+      {
+        "id": "t5-cq-22",
+        "prompt": "What does the garden of forking paths mean?",
+        "answer": "It represents deliberation as involving alternative possible futures, with it being up to the agent which path is taken."
+      },
+      {
+        "id": "t5-cq-23",
+        "prompt": "What is the AO condition, and how is it applied?",
+        "answer": "AO says a person acts freely only if the person could have done otherwise. If a case specifies that the person could not refrain or choose an alternative, AO says the action was not free."
+      },
+      {
+        "id": "t5-cq-24",
+        "prompt": "What is an untouchable fact? Give examples.",
+        "answer": "It is a fact no human being in history has ever had power to change. Van Inwagen's examples include the earth's being round, magnets attracting iron, there once being dinosaurs, and 317 being prime."
+      },
+      {
+        "id": "t5-cq-25",
+        "prompt": "What is the Untouchability Principle, and how is it relevant to the Consequence Argument?",
+        "answer": "If p is untouchable and the conditional 'if p, then q' is untouchable, then q is untouchable. The Consequence Argument applies this principle to the distant past and its deterministic consequence for a present action."
+      },
+      {
+        "id": "t5-cq-26",
+        "prompt": "What is the Consequence Argument, how are its premises defended, and why does its conclusion matter?",
+        "answer": "Assuming determinism, the distant past and laws are untouchable, and their consequence for the present is untouchable. The past predates human beings, and humans do not control the laws or their consequences. If the present action is untouchable, AO says the agent could not have done otherwise."
+      },
+      {
+        "id": "t5-cq-27",
+        "prompt": "What do DINO and CLASS stand for in the classroom formulation?",
+        "answer": "DINO is the state of the world at an arbitrary moment in 70 million BCE plus the laws of nature. CLASS is the fact that the speaker is in PHI class on July 28, 2026. On the test, these ideas must be recognized without the abbreviations."
+      },
+      {
+        "id": "t5-cq-28",
+        "prompt": "Why does the Consequence Argument's conclusion matter for free will?",
+        "answer": "If being in class is untouchable, no human has ever had power to change that fact. The student therefore could not have done otherwise, so AO says the action was not performed freely."
+      },
+      {
+        "id": "t5-cq-29",
+        "prompt": "Is the Consequence Argument compatibilist or incompatibilist?",
+        "answer": "It is an argument for incompatibilism because it aims to show that, if determinism is true, present actions fail the ability-to-do-otherwise condition."
+      },
+      {
+        "id": "t5-cq-30",
+        "prompt": "Describe a choice that a libertarian might regard as AO-satisfying and free.",
+        "answer": "Kane's businesswoman is torn between stopping to help an assault victim and continuing to an important meeting. If both options are genuinely possible and her choice is not determined by the past and laws, the choice can satisfy AO."
+      },
+      {
+        "id": "t5-cq-31",
+        "prompt": "What is a self-forming action, and what role does it play in Kane's theory?",
+        "answer": "An SFA is a psychologically torn decision through which an agent forms dispositions and character traits. Kane argues that not every act must be undetermined; the important undetermined acts are those by which agents make themselves into the people they become."
+      },
+      {
+        "id": "t5-cq-32",
+        "prompt": "What follows if determinism rules out free will and indeterminism also rules out free will?",
+        "answer": "Either determinism is true or false. If both possibilities rule out free will, then no free will exists."
+      },
+      {
+        "id": "t5-cq-33",
+        "prompt": "What do libertarian and hard incompatibilists disagree about?",
+        "answer": "They agree that determinism rules out free will. They disagree about whether humans have free will and, consequently, whether determinism must be false."
+      },
+      {
+        "id": "t5-cq-34",
+        "prompt": "What is the harmful consequences objection to hard incompatibilism?",
+        "answer": "It says that accepting hard incompatibilism would have harmful consequences."
+      },
+      {
+        "id": "t5-cq-35",
+        "prompt": "What harmful consequences are alleged to follow from accepting hard incompatibilism?",
+        "answer": "The notes list the claims that nothing would be morally right or wrong, there would be no moral constraints on behavior, punishment would always be unjust, and violent criminals would have to be released."
+      },
+      {
+        "id": "t5-cq-36",
+        "prompt": "What is a theory of punishment?",
+        "answer": "A theory of punishment gives a general justification for punishing wrongdoers."
+      },
+      {
+        "id": "t5-cq-37",
+        "prompt": "How do retributivism and the contagion theory differ, and why does that matter?",
+        "answer": "Retributivism justifies punishment because criminals deserve it. The contagion theory justifies restraint to prevent further harm, like quarantine. Hard incompatibilism undermines desert but does not eliminate preventive protection."
+      },
+      {
+        "id": "t5-cq-38",
+        "prompt": "How does Pereboom answer the claim that hard incompatibilism eliminates right and wrong?",
+        "answer": "He separates moral right and wrong from moral responsibility. An action may remain wrong even if the person who performs it is not morally responsible in the desert-based sense."
+      },
+      {
+        "id": "t5-cq-39",
+        "prompt": "Why does hard incompatibilism undermine retributivism?",
+        "answer": "Retributivism depends on criminals deserving punishment. If no one has the responsibility-making free will required for basic desert, punishment cannot be justified merely because suffering is deserved."
+      },
+      {
+        "id": "t5-cq-40",
+        "prompt": "What happens in the Myth of Sisyphus, and why is it relevant to life's meaning?",
+        "answer": "Sisyphus is condemned forever to push a stone uphill, only for it to roll down again. His repeated labor never produces a lasting result, making it an image of endless, pointless existence."
+      },
+      {
+        "id": "t5-cq-41",
+        "prompt": "What is the classroom argument for pessimism about the meaning of life?",
+        "answer": "A reconstructed version is: (1) A life is meaningless if it consists of repetitive activities that never produce a lasting result. (2) Human life ultimately consists of repetitive activities whose results eventually disappear. (3) Therefore, human life is meaningless. This pessimistic argument treats human life as relevantly similar to Sisyphus's endless, resultless labor."
+      },
+      {
+        "id": "t5-cq-42",
+        "prompt": "Where does meaning come from for Taylor, and what does Sisyphus on Drugs illustrate?",
+        "answer": "Taylor locates meaning in the agent's will to pursue an activity. In the altered case, the gods give Sisyphus a powerful desire to roll stones, so the same activity now fulfills exactly what he wants. The case illustrates that meaning can come from within the activity and the agent's desire rather than from a lasting final product."
+      }
+    ],
+    "arguments": [
+      {
+        "id": "consequence",
+        "title": "The Consequence Argument",
+        "shortTitle": "Consequence",
+        "source": "Peter van Inwagen / lecture notes and Study Guide #5",
+        "builder": true,
+        "steps": [
+          {
+            "id": "consequence-1",
+            "text": "Determinism is true. (Assume.)"
+          },
+          {
+            "id": "consequence-2",
+            "text": "It is an untouchable fact that DINO occurred."
+          },
+          {
+            "id": "consequence-3",
+            "text": "It is an untouchable fact that if DINO occurred, then I am in PHI class on July 28, 2026."
+          },
+          {
+            "id": "consequence-4",
+            "text": "Therefore, it is an untouchable fact that I am in PHI class on July 28, 2026. (C2, C3)"
+          },
+          {
+            "id": "consequence-5",
+            "text": "Therefore, if determinism is true, then it is an untouchable fact that I am in PHI class on July 28, 2026. (C1, C4)"
+          }
+        ]
+      },
+      {
+        "id": "no-free-will",
+        "title": "The No Free Will Argument",
+        "shortTitle": "No Free Will",
+        "source": "Hard incompatibilism / lecture notes and Study Guide #5",
+        "builder": true,
+        "steps": [
+          {
+            "id": "no-free-will-1",
+            "text": "Either determinism is true or determinism is false."
+          },
+          {
+            "id": "no-free-will-2",
+            "text": "If determinism is true, then we have no free will."
+          },
+          {
+            "id": "no-free-will-3",
+            "text": "If determinism is false, then we have no free will."
+          },
+          {
+            "id": "no-free-will-4",
+            "text": "Therefore, we have no free will."
+          }
+        ]
+      }
     ]
   },
-  // US State Capitals flashcard set
-  {
-    id: 'us-capitals',
-    title: 'US State Capitals',
-    description: 'Capital cities of US states',
-    subject: 'Geography',
-    color: '#23b26d',
-    emoji: '🇺🇸',
-    cards: [
-      { id: 1, term: 'California', definition: 'Sacramento' },
-      { id: 2, term: 'New York', definition: 'Albany' },
-      { id: 3, term: 'Texas', definition: 'Austin' },
-      { id: 4, term: 'Florida', definition: 'Tallahassee' },
-      { id: 5, term: 'Illinois', definition: 'Springfield' },
-      { id: 6, term: 'Pennsylvania', definition: 'Harrisburg' },
-      { id: 7, term: 'Ohio', definition: 'Columbus' },
-      { id: 8, term: 'Georgia', definition: 'Atlanta' },
-      { id: 9, term: 'Michigan', definition: 'Lansing' },
-      { id: 10, term: 'Washington', definition: 'Olympia' },
-    ]
-  },
-  // Biology: Cell Biology flashcard set
-  {
-    id: 'biology-cells',
-    title: 'Biology: Cell Biology',
-    description: 'Key terms in cell biology and organelles',
-    subject: 'Science',
-    color: '#7c5cbf',
-    emoji: '🔬',
-    cards: [
-      { id: 1, term: 'Mitochondria', definition: 'The powerhouse of the cell; produces ATP through cellular respiration' },
-      { id: 2, term: 'Nucleus', definition: 'Control center of the cell; contains DNA and directs cell activities' },
-      { id: 3, term: 'Ribosome', definition: 'Site of protein synthesis in the cell' },
-      { id: 4, term: 'Cell membrane', definition: 'Selectively permeable barrier surrounding the cell' },
-      { id: 5, term: 'Endoplasmic Reticulum', definition: 'Network of membranes for protein and lipid synthesis; ER' },
-      { id: 6, term: 'Golgi Apparatus', definition: 'Packages and ships proteins to their destinations' },
-      { id: 7, term: 'Chloroplast', definition: 'Site of photosynthesis in plant cells; contains chlorophyll' },
-      { id: 8, term: 'Vacuole', definition: 'Storage organelle; large in plant cells, smaller in animal cells' },
-      { id: 9, term: 'Lysosome', definition: 'Contains digestive enzymes; breaks down waste materials' },
-      { id: 10, term: 'Cell wall', definition: 'Rigid outer layer found in plant, fungi, and bacterial cells' },
-    ]
-  }
 ];
 
 export function getSet(id) {
