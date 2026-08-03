@@ -12,7 +12,7 @@ import ComprehensionPractice from './components/ComprehensionPractice';
 import AuthModal from './components/AuthModal';
 import SetEditor from './components/SetEditor';
 import { useSets } from './context/SetsContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function App() {
   const { getSet } = useSets();
@@ -30,16 +30,12 @@ export default function App() {
 
   const hideNav = page.type === 'test' && page.mode === 'match';
 
-  return (
-    <div className="min-h-screen bg-qbg dark:bg-gray-900 transition-colors">
-      {!hideNav && (
-        <Navbar
-          onHome={goHome}
-          onCreate={goCreate}
-          onRequestAuth={(mode) => setAuthModal({ open: true, mode })}
-        />
-      )}
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [page]);
 
+  const renderPage = () => (
+    <>
       {page.type === 'home' && (
         <Home
           key={page.tab}
@@ -119,6 +115,23 @@ export default function App() {
           onClose={() => setAuthModal((current) => ({ ...current, open: false }))}
         />
       )}
+    </>
+  );
+
+  return (
+    <div className={`app-shell ${hideNav ? 'app-shell--focus' : ''}`}>
+      {!hideNav && (
+        <Navbar
+          page={page}
+          onHome={goHome}
+          onCreate={goCreate}
+          onRequestAuth={(mode) => setAuthModal({ open: true, mode })}
+        />
+      )}
+      <div className="app-stage">{renderPage()}</div>
+      <div className="ambient-orb ambient-orb--one" aria-hidden="true" />
+      <div className="ambient-orb ambient-orb--two" aria-hidden="true" />
+      <div className="app-grain" aria-hidden="true" />
     </div>
   );
 }

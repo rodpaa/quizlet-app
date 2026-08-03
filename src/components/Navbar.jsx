@@ -1,57 +1,93 @@
 import { useState } from 'react';
-import { ChevronDown, LogIn, LogOut, Moon, Plus, Sun, UserRound } from 'lucide-react';
+import {
+  BookOpen, ChevronDown, Compass, Library, LogIn, LogOut, Menu,
+  Moon, Plus, Sparkles, Sun, UserRound, X,
+} from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
-export default function Navbar({ onHome, onCreate, onRequestAuth }) {
+export default function Navbar({ page, onHome, onCreate, onRequestAuth }) {
   const { isDark, toggle } = useTheme();
   const { user, profile, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isHome = page.type === 'home';
+  const activeTab = isHome ? page.tab : null;
+
+  const navigate = (action) => {
+    action();
+    setMobileOpen(false);
+  };
+
+  const nav = (
+    <>
+      <button onClick={() => navigate(() => onHome('discover'))} className={`shell-nav-item ${activeTab === 'discover' ? 'is-active' : ''}`}>
+        <Compass size={19} />
+        <span>Discover</span>
+      </button>
+      <button onClick={() => navigate(() => onHome('mine'))} className={`shell-nav-item ${activeTab === 'mine' ? 'is-active' : ''}`}>
+        <Library size={19} />
+        <span>My library</span>
+      </button>
+      <button onClick={() => navigate(user ? onCreate : () => onRequestAuth('signup'))} className={`shell-nav-item ${page.type === 'editor' ? 'is-active' : ''}`}>
+        <Plus size={19} />
+        <span>Create set</span>
+      </button>
+    </>
+  );
 
   return (
-    <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
-        <button onClick={onHome} className="flex items-center gap-2 font-black text-xl text-qblue hover:text-qblue2 transition-colors shrink-0" aria-label="Quizlet home">
-          <span className="bg-qblue text-white rounded-md w-8 h-8 flex items-center justify-center text-base font-black">Q</span>
-          <span className="dark:text-white hidden sm:inline">Quizlet</span>
+    <>
+      <header className="mobile-shell-bar">
+        <button onClick={() => onHome('discover')} className="shell-brand" aria-label="Study Library home">
+          <span className="shell-brand-mark"><BookOpen size={18} /></span>
+          <span>Study Library</span>
         </button>
+        <button onClick={() => setMobileOpen((value) => !value)} className="shell-icon-button" aria-label="Toggle navigation" aria-expanded={mobileOpen}>
+          {mobileOpen ? <X size={21} /> : <Menu size={21} />}
+        </button>
+      </header>
 
-        <div className="flex items-center gap-2">
-          {user && (
-            <button onClick={onCreate} className="secondary-button hidden sm:flex">
-              <Plus size={17} /> Create
-            </button>
-          )}
-          <button onClick={toggle} className="icon-button" title={isDark ? 'Light mode' : 'Dark mode'} aria-label={isDark ? 'Use light mode' : 'Use dark mode'}>
-            {isDark ? <Sun size={19} /> : <Moon size={19} />}
+      <aside className={`shell-sidebar ${mobileOpen ? 'is-open' : ''}`}>
+        <div>
+          <button onClick={() => navigate(() => onHome('discover'))} className="shell-brand" aria-label="Study Library home">
+            <span className="shell-brand-mark"><BookOpen size={20} /></span>
+            <span>Study Library</span>
+          </button>
+
+          <div className="shell-eyebrow"><Sparkles size={13} /> Your study space</div>
+          <nav className="shell-nav" aria-label="Main navigation">{nav}</nav>
+        </div>
+
+        <div className="shell-account">
+          <button onClick={toggle} className="shell-theme-button">
+            {isDark ? <Sun size={17} /> : <Moon size={17} />}
+            <span>{isDark ? 'Light appearance' : 'Dark appearance'}</span>
           </button>
 
           {user ? (
             <div className="relative">
-              <button onClick={() => setMenuOpen((value) => !value)} className="flex items-center gap-2 h-10 pl-1.5 pr-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-expanded={menuOpen}>
-                <span className="w-7 h-7 bg-qyellow text-gray-950 rounded-md flex items-center justify-center font-black text-sm">{profile?.displayName?.charAt(0).toUpperCase()}</span>
-                <span className="hidden md:block text-sm font-black text-gray-800 dark:text-gray-200 max-w-32 truncate">{profile?.displayName}</span>
-                <ChevronDown size={15} className="text-gray-400" />
+              <button onClick={() => setMenuOpen((value) => !value)} className="shell-profile" aria-expanded={menuOpen}>
+                <span className="shell-avatar">{profile?.displayName?.charAt(0).toUpperCase() || 'S'}</span>
+                <span className="shell-profile-copy">
+                  <strong>{profile?.displayName || 'Student'}</strong>
+                  <small>{user.isDemo ? 'Local demo' : 'Account'}</small>
+                </span>
+                <ChevronDown size={15} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-2">
-                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
-                    <div className="font-black text-gray-900 dark:text-white truncate">{profile?.displayName}</div>
-                    <div className="text-xs font-semibold text-gray-500 truncate">{user.isDemo ? 'Local demo mode' : profile?.email}</div>
-                  </div>
-                  <button onClick={() => { onHome('mine'); setMenuOpen(false); }} className="menu-button"><UserRound size={17} /> My sets</button>
-                  <button onClick={() => { onCreate(); setMenuOpen(false); }} className="menu-button sm:hidden"><Plus size={17} /> Create set</button>
-                  <button onClick={() => { signOut(); setMenuOpen(false); onHome(); }} className="menu-button text-qred"><LogOut size={17} /> Sign out</button>
+                <div className="shell-profile-menu">
+                  <button onClick={() => { navigate(() => onHome('mine')); setMenuOpen(false); }} className="menu-button"><UserRound size={17} /> My sets</button>
+                  <button onClick={() => { signOut(); setMenuOpen(false); navigate(() => onHome()); }} className="menu-button text-qred"><LogOut size={17} /> Sign out</button>
                 </div>
               )}
             </div>
           ) : (
-            <button onClick={() => onRequestAuth('signin')} className="primary-button">
-              <LogIn size={17} /> <span className="hidden sm:inline">Sign in</span>
-            </button>
+            <button onClick={() => onRequestAuth('signin')} className="shell-sign-in"><LogIn size={17} /> Sign in</button>
           )}
         </div>
-      </div>
-    </nav>
+      </aside>
+      {mobileOpen && <button className="shell-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
+    </>
   );
 }

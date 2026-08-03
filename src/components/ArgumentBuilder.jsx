@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowDown, ArrowUp, Check, GripVertical, MousePointer2, RotateCcw } from 'lucide-react';
 import { useSets } from '../context/SetsContext';
 import { playCelebration, playCorrect, playWrong } from '../utils/sound';
 
@@ -9,12 +10,17 @@ function shuffle(items) {
 function buildExercises(argumentsList) {
   return Object.fromEntries(argumentsList.map(argument => [
     argument.id,
-    {
-      answers: Array(argument.steps.length).fill(''),
-      options: shuffle(argument.steps.map(step => step.id)),
-      checked: false,
-    },
+    { answers: Array(argument.steps.length).fill(''), options: shuffle(argument.steps.map(step => step.id)), checked: false },
   ]));
+}
+
+function moveIntoSlot(answers, targetIndex, stepId) {
+  const next = [...answers];
+  const sourceIndex = next.indexOf(stepId);
+  const displaced = next[targetIndex];
+  next[targetIndex] = stepId;
+  if (sourceIndex >= 0 && sourceIndex !== targetIndex) next[sourceIndex] = displaced;
+  return next;
 }
 
 export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
@@ -24,6 +30,9 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
   const [courseLabel, testLabel] = (set?.title || 'Study set').split(':').map(part => part.trim());
   const cardsReadyForPractice = set?.cards?.length > 0 && set.cards.every((card) => !card.pending);
   const [exercises, setExercises] = useState(() => buildExercises(argumentsList));
+  const [dragging, setDragging] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
 
   if (!set || argumentsList.length === 0) return null;
 
@@ -32,190 +41,181 @@ export default function ArgumentBuilder({ setId, onBack, onFlashcards }) {
     return exercise.checked && exercise.answers.every((answer, index) => answer === argument.steps[index].id);
   }).length;
 
-  const selectAnswer = (argumentId, stepIndex, stepId) => {
+  const updateAnswers = (argumentId, updater) => {
     setExercises(current => ({
       ...current,
-      [argumentId]: {
-        ...current[argumentId],
-        answers: current[argumentId].answers.map((answer, index) => index === stepIndex ? stepId : answer),
-        checked: false,
-      },
+      [argumentId]: { ...current[argumentId], answers: updater(current[argumentId].answers), checked: false },
     }));
+  };
+
+  const placeStep = (argumentId, stepIndex, stepId) => {
+    if (!stepId) return;
+    updateAnswers(argumentId, answers => moveIntoSlot(answers, stepIndex, stepId));
+    setSelected(null);
+    setDropTarget(null);
+  };
+
+  const returnToBank = (argumentId, stepId) => {
+    updateAnswers(argumentId, answers => answers.map(answer => answer === stepId ? '' : answer));
+    setSelected(null);
+  };
+
+  const nudgeStep = (argumentId, stepIndex, direction) => {
+    const target = stepIndex + direction;
+    if (target < 0 || target >= exercises[argumentId].answers.length) return;
+    updateAnswers(argumentId, answers => {
+      const next = [...answers];
+      [next[stepIndex], next[target]] = [next[target], next[stepIndex]];
+      return next;
+    });
+  };
+
+  const beginDrag = (event, argumentId, stepId) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', stepId);
+    setDragging({ argumentId, stepId });
+  };
+
+  const dropOnSlot = (event, argumentId, stepIndex) => {
+    event.preventDefault();
+    const stepId = event.dataTransfer.getData('text/plain') || dragging?.stepId;
+    if (stepId && dragging?.argumentId === argumentId) placeStep(argumentId, stepIndex, stepId);
+    setDragging(null);
   };
 
   const checkArgument = (argument) => {
     const exercise = exercises[argument.id];
     const correctCount = exercise.answers.filter((answer, index) => answer === argument.steps[index].id).length;
-
-    setExercises(current => ({
-      ...current,
-      [argument.id]: { ...current[argument.id], checked: true },
-    }));
-
+    setExercises(current => ({ ...current, [argument.id]: { ...current[argument.id], checked: true } }));
     if (correctCount === argument.steps.length) {
       if (masteredCount + 1 === argumentsList.length) playCelebration();
       else playCorrect();
-    } else {
-      playWrong();
-    }
+    } else playWrong();
   };
 
   const resetArgument = (argument) => {
     setExercises(current => ({
       ...current,
-      [argument.id]: {
-        answers: Array(argument.steps.length).fill(''),
-        options: shuffle(argument.steps.map(step => step.id)),
-        checked: false,
-      },
+      [argument.id]: { answers: Array(argument.steps.length).fill(''), options: shuffle(argument.steps.map(step => step.id)), checked: false },
     }));
+    setSelected(null);
   };
 
-  const resetAll = () => setExercises(buildExercises(argumentsList));
+  const resetAll = () => { setExercises(buildExercises(argumentsList)); setSelected(null); };
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-6 sm:py-10">
-      <div className="flex items-center justify-between gap-4 mb-7">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm font-black text-gray-500 dark:text-gray-400 hover:text-qblue transition-colors"
-        >
-          <span aria-hidden="true">&larr;</span>
-          {courseLabel}
-        </button>
-        <div className="text-sm font-black text-gray-500 dark:text-gray-400">
-          {masteredCount} / {argumentsList.length} mastered
-        </div>
+    <main className="argument-builder-page">
+      <div className="argument-builder-topbar">
+        <button onClick={onBack} className="argument-back"><span aria-hidden="true">&larr;</span> {courseLabel}</button>
+        <div className="argument-mastery"><span>{masteredCount}</span> / {argumentsList.length} mastered</div>
       </div>
 
-      <header className="border-b border-gray-200 dark:border-gray-700 pb-7 mb-7">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5">
-          <div>
-            <div className="text-xs font-black uppercase text-qorange mb-2">
-              {courseLabel}{testLabel ? <> &middot; {testLabel}</> : null}
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-2">Argument reconstruction</h1>
-            <p className="max-w-2xl text-gray-500 dark:text-gray-400 font-semibold">
-              Rebuild each argument by choosing the correct statement for every labeled step.
-            </p>
-          </div>
-          <button
-            onClick={resetAll}
-            className="h-10 px-4 self-start md:self-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-black text-gray-600 dark:text-gray-300 hover:border-gray-400 transition-colors"
-          >
-            Reset all
-          </button>
+      <header className="argument-builder-hero">
+        <div>
+          <div className="page-kicker">{courseLabel}{testLabel ? <> &middot; {testLabel}</> : null}</div>
+          <h1>Build the argument.</h1>
+          <p>Drag each statement into the logical structure. On touch devices, tap a statement and then tap its destination.</p>
         </div>
-
-        <div className="flex gap-2 mt-6" aria-label="Study mode">
-          <button
-            aria-pressed="true"
-            className="h-11 px-5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black"
-          >
-            Argument Builder
-          </button>
-          {cardsReadyForPractice && (
-            <button
-              onClick={onFlashcards}
-              className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-black hover:border-qblue hover:text-qblue transition-colors"
-            >
-              Flashcards
-            </button>
-          )}
-        </div>
+        <button onClick={resetAll} className="argument-reset"><RotateCcw size={16} /> Reset all</button>
       </header>
 
-      <div className="progress-bar mb-7">
-        <div className="progress-fill" style={{ width: `${(masteredCount / argumentsList.length) * 100}%` }} />
+      <div className="argument-mode-row">
+        <span className="argument-mode-pill"><GripVertical size={16} /> Argument Builder</span>
+        {cardsReadyForPractice && <button onClick={onFlashcards}>Switch to flashcards</button>}
       </div>
 
-      <div className="space-y-5">
+      <div className="progress-bar argument-progress"><div className="progress-fill" style={{ width: `${(masteredCount / argumentsList.length) * 100}%` }} /></div>
+
+      <div className="argument-stack">
         {argumentsList.map((argument, argumentIndex) => {
           const exercise = exercises[argument.id];
           const optionById = Object.fromEntries(argument.steps.map(step => [step.id, step]));
           const correctCount = exercise.answers.filter((answer, index) => answer === argument.steps[index].id).length;
           const isMastered = exercise.checked && correctCount === argument.steps.length;
+          const available = exercise.options.filter(stepId => !exercise.answers.includes(stepId));
+          const selectedForArgument = selected?.argumentId === argument.id ? selected.stepId : null;
 
           return (
-            <section
-              key={argument.id}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-6 animate-slide-up"
-              style={{ animationDelay: `${argumentIndex * 45}ms` }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+            <section key={argument.id} className={`argument-workspace ${isMastered ? 'is-mastered' : ''}`} style={{ '--argument-delay': `${argumentIndex * 55}ms` }}>
+              <div className="argument-heading">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">
-                    {argument.title} <span className="text-qblue">({argument.shortTitle})</span>
-                  </h2>
-                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1">
-                    Source: {argument.source} &middot; {argument.steps.length} steps
-                  </p>
+                  <span className="argument-number">Argument {String(argumentIndex + 1).padStart(2, '0')}</span>
+                  <h2>{argument.title} <em>{argument.shortTitle}</em></h2>
+                  <p>{argument.source} &middot; {argument.steps.length} logical steps</p>
                 </div>
-                {isMastered && (
-                  <span className="self-start rounded-md bg-green-100 dark:bg-green-900/30 text-qgreen px-3 py-1.5 text-xs font-black uppercase">
-                    Mastered
-                  </span>
-                )}
+                {isMastered && <span className="argument-mastered"><Check size={15} /> Mastered</span>}
               </div>
 
-              <div className="space-y-3">
-                {argument.steps.map((step, stepIndex) => {
-                  const answer = exercise.answers[stepIndex];
-                  const isCorrect = exercise.checked && answer === step.id;
-                  const isWrong = exercise.checked && answer !== step.id;
+              <div className="argument-board">
+                <aside className="statement-bank" aria-label={`Statement bank for ${argument.title}`}>
+                  <div className="argument-column-label"><span>Statement bank</span><small>{available.length} remaining</small></div>
+                  <div className="statement-bank-list">
+                    {available.length ? available.map(stepId => (
+                      <button
+                        key={stepId}
+                        draggable
+                        onDragStart={event => beginDrag(event, argument.id, stepId)}
+                        onDragEnd={() => { setDragging(null); setDropTarget(null); }}
+                        onClick={() => setSelected(current => current?.argumentId === argument.id && current.stepId === stepId ? null : { argumentId: argument.id, stepId })}
+                        className={`statement-card ${selectedForArgument === stepId ? 'is-selected' : ''} ${dragging?.stepId === stepId ? 'is-dragging' : ''}`}
+                        aria-pressed={selectedForArgument === stepId}
+                      >
+                        <GripVertical size={17} className="statement-grip" />
+                        <span>{optionById[stepId].text}</span>
+                      </button>
+                    )) : (
+                      <div className="statement-bank-empty"><Check size={20} /><span>All statements placed</span></div>
+                    )}
+                  </div>
+                  <div className="argument-touch-hint"><MousePointer2 size={14} /> Tap a card, then a numbered slot</div>
+                </aside>
 
-                  return (
-                    <div key={step.id} className="grid grid-cols-[3.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)] gap-2 sm:gap-4 items-center">
-                      <label htmlFor={`${argument.id}-${step.id}`} className="font-black text-qblue text-sm sm:text-base">
-                        {step.id}
-                      </label>
-                      <div className="relative min-w-0">
-                        <select
-                          id={`${argument.id}-${step.id}`}
-                          value={answer}
-                          onChange={event => selectAnswer(argument.id, stepIndex, event.target.value)}
-                          className={`w-full h-12 appearance-none rounded-lg border-2 pl-3 pr-10 text-sm sm:text-base font-bold transition-colors outline-none
-                            ${isCorrect
-                              ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-200'
-                              : isWrong
-                                ? 'border-red-400 bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-200'
-                                : 'border-gray-200 bg-white text-gray-800 focus:border-qblue dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100'}`}
+                <div className="argument-structure" aria-label={`Logical structure for ${argument.title}`}>
+                  <div className="argument-column-label"><span>Logical structure</span><small>Top to bottom</small></div>
+                  <div className="argument-slots">
+                    {argument.steps.map((step, stepIndex) => {
+                      const answer = exercise.answers[stepIndex];
+                      const isCorrect = exercise.checked && answer === step.id;
+                      const isWrong = exercise.checked && answer !== step.id;
+                      const targetKey = `${argument.id}-${stepIndex}`;
+                      return (
+                        <div
+                          key={step.id}
+                          onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setDropTarget(targetKey); }}
+                          onDragLeave={() => setDropTarget(current => current === targetKey ? null : current)}
+                          onDrop={event => dropOnSlot(event, argument.id, stepIndex)}
+                          onClick={() => selectedForArgument && placeStep(argument.id, stepIndex, selectedForArgument)}
+                          className={`argument-slot ${answer ? 'is-filled' : ''} ${dropTarget === targetKey ? 'is-drop-target' : ''} ${isCorrect ? 'is-correct' : ''} ${isWrong ? 'is-wrong' : ''}`}
                         >
-                          <option value="">-- choose the correct step --</option>
-                          {exercise.options.map(optionId => (
-                            <option key={optionId} value={optionId}>{optionById[optionId].text}</option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true">
-                          {isCorrect ? '\u2713' : isWrong ? '\u00d7' : '\u2304'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
-                <button
-                  onClick={() => checkArgument(argument)}
-                  className="h-11 px-5 rounded-lg bg-qblue hover:bg-qblue2 text-white font-black transition-colors"
-                >
-                  Check answers
-                </button>
-                <button
-                  onClick={() => resetArgument(argument)}
-                  className="h-11 px-5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-black hover:border-gray-400 transition-colors"
-                >
-                  Reset / reshuffle
-                </button>
-                <div className="sm:ml-auto min-h-6 text-sm font-black" aria-live="polite">
-                  {exercise.checked && (
-                    <span className={isMastered ? 'text-qgreen' : 'text-qred'}>
-                      {correctCount} / {argument.steps.length} correct
-                    </span>
-                  )}
+                          <div className="argument-slot-marker"><strong>{step.id}</strong><small>{stepIndex === argument.steps.length - 1 ? 'Conclusion' : 'Premise'}</small></div>
+                          {answer ? (
+                            <div className="placed-statement" draggable onDragStart={event => beginDrag(event, argument.id, answer)} onDragEnd={() => setDragging(null)}>
+                              <GripVertical size={17} className="statement-grip" />
+                              <span>{optionById[answer].text}</span>
+                              <div className="placed-actions">
+                                <button onClick={event => { event.stopPropagation(); nudgeStep(argument.id, stepIndex, -1); }} disabled={stepIndex === 0} aria-label={`Move ${answer} up`}><ArrowUp size={14} /></button>
+                                <button onClick={event => { event.stopPropagation(); nudgeStep(argument.id, stepIndex, 1); }} disabled={stepIndex === argument.steps.length - 1} aria-label={`Move ${answer} down`}><ArrowDown size={14} /></button>
+                                <button onClick={event => { event.stopPropagation(); returnToBank(argument.id, answer); }} aria-label={`Return ${answer} to statement bank`}>&times;</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="argument-slot-empty">{selectedForArgument ? 'Tap to place selected statement' : 'Drop a statement here'}</div>
+                          )}
+                          {exercise.checked && <span className={`argument-result-mark ${isCorrect ? 'is-correct' : 'is-wrong'}`}>{isCorrect ? '\u2713' : '\u00d7'}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              <footer className="argument-actions">
+                <button onClick={() => checkArgument(argument)} disabled={exercise.answers.some(answer => !answer)} className="argument-check">Check structure</button>
+                <button onClick={() => resetArgument(argument)} className="argument-reshuffle"><RotateCcw size={15} /> Reset & reshuffle</button>
+                <div className="argument-score" aria-live="polite">
+                  {exercise.checked && <span className={isMastered ? 'text-qgreen' : 'text-qred'}>{correctCount} / {argument.steps.length} correct</span>}
+                </div>
+              </footer>
             </section>
           );
         })}

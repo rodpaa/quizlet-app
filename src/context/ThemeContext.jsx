@@ -13,9 +13,9 @@ function applyTheme(dark) {
 
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
-    // Default to light unless user explicitly chose dark
+    // The glass study system is dark-first, while preserving an explicit choice.
     const saved = localStorage.getItem('theme');
-    const dark = saved === 'dark';
+    const dark = saved ? saved === 'dark' : true;
     applyTheme(dark);
     return dark;
   });
