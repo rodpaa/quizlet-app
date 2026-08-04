@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpenCheck, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, CheckCircle2, GripVertical, RotateCcw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useSets } from '../context/SetsContext';
 import { playCelebration, playWrong } from '../utils/sound';
@@ -215,6 +215,95 @@ function takeVersionWindow(items, count, versionIndex) {
   );
 }
 
+function buildProgressivePracticeVersion(set, version = 'A') {
+  const config = set.practiceVersionConfig?.[version];
+  if (!config) return null;
+
+  const choiceCount = config.choiceCount || 5;
+  const readyCards = (set.cards || []).filter(card => isReadyText(card.definition) && !card.pending);
+  const readyComprehension = (set.comprehensionQuestions || [])
+    .filter(question => isReadyText(question.prompt) && isReadyText(question.answer) && !question.pending);
+  const cardById = new Map(readyCards.map(card => [String(card.id), card]));
+  const comprehensionById = new Map(readyComprehension.map(question => [String(question.id), question]));
+
+  const argumentQuestions = (set.arguments || [])
+    .filter(argument => argument.builder !== false && argument.steps.every(step => isReadyText(step.text)))
+    .map(argument => {
+      const correctOrder = argument.steps.map(step => step.id);
+      return {
+        id: `${version}-argument-${argument.id}`,
+        sourceId: argument.id,
+        section: 'argument',
+        interaction: 'argument-order',
+        prompt: `Reconstruct ${argument.title} in its correct logical order.`,
+        answer: argument.steps.map(step => step.text).join(' → '),
+        correctOrder,
+        optionOrder: shuffle(
+          correctOrder,
+          createSeededRandom(hashText(`${set.id}:${version}:argument-order:${argument.id}`))
+        ),
+        points: 5,
+        argument,
+      };
+    });
+
+  const selectedCards = (config.cardIds || []).map(id => cardById.get(String(id))).filter(Boolean);
+  const definitionQuestions = selectedCards.map(card => ({
+    id: `${version}-def-${card.id}`,
+    sourceId: card.id,
+    section: 'definition',
+    prompt: `${card.term} = __________________________________________`,
+    answer: card.definition,
+    points: 2,
+    choices: buildChoices(
+      card.definition,
+      card.practiceDistractors?.length
+        ? card.practiceDistractors
+        : readyCards.map(candidate => candidate.definition).filter(definition => definition !== card.definition),
+      choiceCount,
+      createSeededRandom(hashText(`${set.id}:${version}:progressive-definition:${card.id}`)),
+      Math.random
+    ),
+  }));
+
+  const selectedComprehension = (config.comprehensionIds || [])
+    .map(id => comprehensionById.get(String(id)))
+    .filter(Boolean);
+  const applicationQuestions = selectedComprehension.map(question => {
+    const sameTopicAnswers = readyComprehension
+      .filter(candidate => candidate.id !== question.id && getComprehensionTopic(candidate) === getComprehensionTopic(question))
+      .map(candidate => candidate.answer);
+    const fallbackAnswers = readyComprehension
+      .filter(candidate => candidate.id !== question.id && !sameTopicAnswers.includes(candidate.answer))
+      .map(candidate => candidate.answer);
+    return {
+      id: `${version}-app-${question.id}`,
+      sourceId: question.id,
+      section: 'application',
+      prompt: question.prompt,
+      answer: question.answer,
+      points: 2,
+      choices: buildChoices(
+        question.answer,
+        [...sameTopicAnswers, ...fallbackAnswers],
+        choiceCount,
+        createSeededRandom(hashText(`${set.id}:${version}:progressive-application:${question.id}`)),
+        Math.random
+      ),
+    };
+  });
+
+  return {
+    blueprint: {
+      label: `${set.practiceBlueprintLabel || 'Study-guide question set'} · Version ${version}: ${config.label}`,
+      difficultyLabel: config.label,
+      difficultyDescription: config.description,
+    },
+    questions: [...argumentQuestions, ...definitionQuestions, ...applicationQuestions]
+      .map((question, index) => ({ ...question, number: index + 1 })),
+  };
+}
+
 function buildFullBankPracticeVersion(set, version = 'A') {
   const versionIndex = Math.max(0, TEST_VERSIONS.indexOf(version));
   const explicit = (set.practiceQuestions || [])
@@ -404,6 +493,9 @@ function buildExplicitPracticeQuestions(set, version = 'A') {
 }
 
 function buildPracticeQuestions(set, version = 'A') {
+  if (set.practiceVersionMode === 'progressive') {
+    return buildProgressivePracticeVersion(set, version);
+  }
   if (set.practiceVersionMode === 'full-bank') {
     return buildFullBankPracticeVersion(set, version);
   }
@@ -424,6 +516,20 @@ function buildPracticeQuestions(set, version = 'A') {
       .filter(question => question.choices.length > 1)
       .map((question, index) => ({ ...question, number: index + 1 })),
   };
+}
+
+function hasQuestionAnswer(question, answer) {
+  if (question.interaction === 'argument-order') {
+    return Array.isArray(answer) && answer.length === question.correctOrder.length && answer.every(Boolean);
+  }
+  return answer !== undefined;
+}
+
+function formatQuestionAnswer(question, answer) {
+  if (question.interaction !== 'argument-order') return answer || 'No answer';
+  if (!Array.isArray(answer) || answer.length === 0) return 'No answer';
+  const stepById = Object.fromEntries(question.argument.steps.map(step => [step.id, step.text]));
+  return answer.filter(Boolean).map(stepId => stepById[stepId]).join(' → ') || 'No answer';
 }
 
 function summarizeSections(questions) {
@@ -467,6 +573,95 @@ function ArgumentQuestionContext({ question }) {
   );
 }
 
+function ArgumentOrderQuestion({ question, value = [], onChange }) {
+  const [dragging, setDragging] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const answers = Array.from({ length: question.correctOrder.length }, (_, index) => value[index] || '');
+  const stepById = Object.fromEntries(question.argument.steps.map(step => [step.id, step]));
+  const available = question.optionOrder.filter(stepId => !answers.includes(stepId));
+
+  const placeStep = (targetIndex, stepId) => {
+    if (!stepId) return;
+    const next = [...answers];
+    const sourceIndex = next.indexOf(stepId);
+    const displaced = next[targetIndex];
+    next[targetIndex] = stepId;
+    if (sourceIndex >= 0 && sourceIndex !== targetIndex) next[sourceIndex] = displaced;
+    onChange(next);
+    setSelected(null);
+  };
+
+  const beginDrag = (event, stepId) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', stepId);
+    setDragging(stepId);
+  };
+
+  return (
+    <div className="argument-board" aria-label={`Reconstruct ${question.argument.title}`}>
+      <aside className="statement-bank">
+        <div className="argument-column-label"><span>Statement bank</span><small>{available.length} remaining</small></div>
+        <div className="statement-bank-list">
+          {available.map(stepId => (
+            <button
+              key={stepId}
+              type="button"
+              draggable
+              onDragStart={event => beginDrag(event, stepId)}
+              onDragEnd={() => setDragging(null)}
+              onClick={() => setSelected(current => current === stepId ? null : stepId)}
+              className={`statement-card ${selected === stepId ? 'is-selected' : ''} ${dragging === stepId ? 'is-dragging' : ''}`}
+              aria-pressed={selected === stepId}
+            >
+              <GripVertical size={17} className="statement-grip" />
+              <span>{stepById[stepId].text}</span>
+            </button>
+          ))}
+        </div>
+        <div className="argument-touch-hint">Drag a statement, or tap it and then tap a slot.</div>
+      </aside>
+
+      <div className="argument-structure">
+        <div className="argument-column-label"><span>Logical structure</span><small>Top to bottom</small></div>
+        <div className="argument-slots">
+          {question.correctOrder.map((correctStepId, stepIndex) => {
+            const answer = answers[stepIndex];
+            return (
+              <div
+                key={correctStepId}
+                onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+                onDrop={event => { event.preventDefault(); placeStep(stepIndex, event.dataTransfer.getData('text/plain') || dragging); setDragging(null); }}
+                onClick={() => selected && placeStep(stepIndex, selected)}
+                className={`argument-slot ${answer ? 'is-filled' : ''}`}
+              >
+                <div className="argument-slot-marker">
+                  <strong>{stepIndex + 1}</strong>
+                  <small>{stepIndex === question.correctOrder.length - 1 ? 'Conclusion' : 'Premise'}</small>
+                </div>
+                {answer ? (
+                  <div className="placed-statement" draggable onDragStart={event => beginDrag(event, answer)} onDragEnd={() => setDragging(null)}>
+                    <GripVertical size={17} className="statement-grip" />
+                    <span>{stepById[answer].text}</span>
+                    <button
+                      type="button"
+                      onClick={event => { event.stopPropagation(); onChange(answers.map(stepId => stepId === answer ? '' : stepId)); }}
+                      aria-label={`Return statement ${answer} to bank`}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ) : (
+                  <div className="argument-slot-empty">{selected ? 'Tap to place selected statement' : 'Drop a statement here'}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PracticeTest({ setId, onBack }) {
   const { getSet } = useSets();
   const set = getSet(setId);
@@ -492,9 +687,9 @@ export default function PracticeTest({ setId, onBack }) {
   const totalPoints = questions.reduce((sum, question) => sum + question.points, 0);
   const earnedPoints = results.reduce((sum, result) => sum + result.earnedPoints, 0);
   const scorePct = pct(earnedPoints, totalPoints);
-  const answeredCount = questions.filter(question => answers[question.id] !== undefined).length;
+  const answeredCount = questions.filter(question => hasQuestionAnswer(question, answers[question.id])).length;
   const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
-  const supportsVersions = Boolean(set.practiceQuestions?.length);
+  const supportsVersions = Boolean(set.practiceQuestions?.length || set.practiceVersionConfig);
 
   const resetAttempt = (startImmediately = false) => {
     setManualBuild({ setId, version: selectedVersion, ...buildPracticeQuestions(set, selectedVersion) });
@@ -527,10 +722,13 @@ export default function PracticeTest({ setId, onBack }) {
   const submitTest = () => {
     const gradedResults = questions.map(question => {
       const selectedAnswer = answers[question.id];
-      const correct = selectedAnswer === question.answer;
+      const correct = question.interaction === 'argument-order'
+        ? question.correctOrder.every((stepId, index) => selectedAnswer?.[index] === stepId)
+        : selectedAnswer === question.answer;
       return {
         question,
         selectedAnswer,
+        selectedAnswerLabel: formatQuestionAnswer(question, selectedAnswer),
         correct,
         earnedPoints: correct ? question.points : 0,
       };
@@ -602,8 +800,9 @@ export default function PracticeTest({ setId, onBack }) {
                 Select a test version
               </h2>
               <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">
-                Each 50-point version uses a different fixed mix. Together, A–D cover every ready argument step,
-                vocabulary term, and comprehension question.
+                {set.practiceVersionMode === 'progressive'
+                  ? 'Each 50-point version reconstructs both arguments and becomes more demanding from Foundations (A) to Challenge (D). Together, A–D cover every vocabulary term and comprehension question.'
+                  : 'Each 50-point version uses a different fixed mix. Together, A–D cover every ready argument step, vocabulary term, and comprehension question.'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -629,7 +828,7 @@ export default function PracticeTest({ setId, onBack }) {
                     </span>
                     <span className="relative mt-3 block text-3xl font-black">{version}</span>
                     <span className={`relative mt-2 block text-xs font-bold ${isSelected ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {isSelected ? 'Selected' : 'Choose booklet'}
+                      {set.practiceVersionConfig?.[version]?.label || (isSelected ? 'Selected' : 'Choose booklet')}
                     </span>
                   </button>
                 );
@@ -711,7 +910,7 @@ export default function PracticeTest({ setId, onBack }) {
                   <tr key={result.question.id} className="align-top">
                     <td className="px-4 py-3 font-black text-gray-500 dark:text-gray-400">{result.question.number}</td>
                     <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{result.question.prompt}</td>
-                    <td className={`px-4 py-3 font-semibold ${result.correct ? 'text-gray-700 dark:text-gray-200' : 'text-qred'}`}>{result.selectedAnswer || 'No answer'}</td>
+                    <td className={`px-4 py-3 font-semibold ${result.correct ? 'text-gray-700 dark:text-gray-200' : 'text-qred'}`}>{result.selectedAnswerLabel}</td>
                     <td className="px-4 py-3 font-semibold text-qgreen">{result.question.answer}</td>
                     <td className={`px-4 py-3 font-black ${result.correct ? 'text-qgreen' : 'text-qred'}`}>
                       {result.correct ? 'Correct' : 'Missed'}
@@ -737,7 +936,7 @@ export default function PracticeTest({ setId, onBack }) {
                   <div className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div>
                       <div className="font-black text-gray-400 dark:text-gray-500 uppercase text-xs">Your answer</div>
-                      <p className="font-semibold text-qred mt-1">{result.selectedAnswer || 'No answer'}</p>
+                      <p className="font-semibold text-qred mt-1">{result.selectedAnswerLabel}</p>
                     </div>
                     <div>
                       <div className="font-black text-gray-400 dark:text-gray-500 uppercase text-xs">Correct answer</div>
@@ -825,7 +1024,7 @@ export default function PracticeTest({ setId, onBack }) {
                   </div>
                 </div>
                 <div className="text-sm font-black text-gray-500 dark:text-gray-400">
-                  {question.points} point{question.points !== 1 ? 's' : ''} · Multiple choice
+                  {question.points} point{question.points !== 1 ? 's' : ''} · {question.interaction === 'argument-order' ? 'Drag and drop' : 'Multiple choice'}
                 </div>
               </div>
 
@@ -833,9 +1032,16 @@ export default function PracticeTest({ setId, onBack }) {
                 {question.prompt}
               </h2>
 
-              <ArgumentQuestionContext question={question} />
-
-              <fieldset className="space-y-3">
+              {question.interaction === 'argument-order' ? (
+                <ArgumentOrderQuestion
+                  question={question}
+                  value={answers[question.id]}
+                  onChange={answer => chooseAnswer(question.id, answer)}
+                />
+              ) : (
+              <>
+                <ArgumentQuestionContext question={question} />
+                <fieldset className="space-y-3">
                 <legend className="sr-only">Answer choices for question {question.number}</legend>
                 {question.choices.map((choice, choiceIndex) => {
                   const isSelected = selectedAnswer === choice.text;
@@ -863,7 +1069,9 @@ export default function PracticeTest({ setId, onBack }) {
                     </label>
                   );
                 })}
-              </fieldset>
+                </fieldset>
+              </>
+              )}
             </section>
           );
         })}

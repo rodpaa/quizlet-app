@@ -1082,6 +1082,38 @@ export const flashcardSets = [
         "answer": "Taylor locates meaning in the agent's will to pursue an activity. In the altered case, the gods give Sisyphus a powerful desire to roll stones, so the same activity now fulfills exactly what he wants. The case illustrates that meaning can come from within the activity and the agent's desire rather than from a lasting final product."
       }
     ],
+    "practiceVersionMode": "progressive",
+    "practiceBlueprintLabel": "Test 5 progressive practice",
+    "practiceVersionConfig": {
+      "A": {
+        "label": "Foundations",
+        "description": "Direct definitions and foundational distinctions with four answer choices.",
+        "choiceCount": 4,
+        "cardIds": [1, 3, 4, 5, 6, 7, 11, 12, 19],
+        "comprehensionIds": ["t5-cq-1", "t5-cq-3", "t5-cq-7", "t5-cq-8", "t5-cq-9", "t5-cq-10", "t5-cq-11", "t5-cq-23", "t5-cq-29", "t5-cq-38", "t5-cq-39"]
+      },
+      "B": {
+        "label": "Connections",
+        "description": "Theory comparisons and connected cases with four answer choices.",
+        "choiceCount": 4,
+        "cardIds": [1, 2, 5, 7, 8, 10, 12, 19, 20],
+        "comprehensionIds": ["t5-cq-2", "t5-cq-4", "t5-cq-5", "t5-cq-12", "t5-cq-15", "t5-cq-16", "t5-cq-17", "t5-cq-24", "t5-cq-30", "t5-cq-31", "t5-cq-40"]
+      },
+      "C": {
+        "label": "Analysis",
+        "description": "Argument defenses, counterexamples, and closely related five-choice answers.",
+        "choiceCount": 5,
+        "cardIds": [2, 4, 8, 9, 11, 13, 14, 16, 20],
+        "comprehensionIds": ["t5-cq-6", "t5-cq-13", "t5-cq-14", "t5-cq-18", "t5-cq-19", "t5-cq-25", "t5-cq-26", "t5-cq-32", "t5-cq-34", "t5-cq-35", "t5-cq-36"]
+      },
+      "D": {
+        "label": "Challenge",
+        "description": "The most integrative cases and subtle distinctions with five-choice answers.",
+        "choiceCount": 5,
+        "cardIds": [8, 9, 10, 13, 14, 15, 16, 17, 18],
+        "comprehensionIds": ["t5-cq-14", "t5-cq-16", "t5-cq-20", "t5-cq-21", "t5-cq-22", "t5-cq-27", "t5-cq-28", "t5-cq-33", "t5-cq-37", "t5-cq-41", "t5-cq-42"]
+      }
+    },
     "arguments": [
       {
         "id": "consequence",
